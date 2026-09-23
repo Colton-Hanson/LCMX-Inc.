@@ -179,3 +179,5 @@ Course Instructor				Signature				Date
 
 
 Team Representative				Signature				Date
+
+**Claude Sonnet 5 used to format this document for markdown on GitHub. No changes were made to the content by the model**
