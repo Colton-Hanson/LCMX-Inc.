@@ -169,15 +169,10 @@ Authentication and the database schema (m3) gate everything. The core ledger (m4
 
 Signing below indicates agreement with the vision, objectives, scope boundaries, and timeline defined in this charter.
 
-Project Sponsor				
-Signature				Date
-
-
-
 Course Instructor				Signature				Date
 
 
 
 Team Representative				Signature				Date
-
+Xander McKie              XWM             9/25/26
 **Claude Sonnet 5 used to format this document for markdown on GitHub. No changes were made to the content by the model**
