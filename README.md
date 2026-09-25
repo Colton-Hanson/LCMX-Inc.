@@ -94,4 +94,4 @@ Confirm this matches reality once Iteration 0's scaffolding actually lands. A st
 
 ---
 
-Course number, instructor, semester: fill in. Fall 2026 capstone.
+CS451R, Professor Jawad, Fall 2026 capstone.
