@@ -1,0 +1,34 @@
+/* styles.css — our own small CSS. Most of the look now comes from Bootstrap (the team's "1 CSS framework"),
+   which main.jsx loads just before this file. Only the things Bootstrap doesn't do for us live here.
+   Bootstrap handles light/dark colors too (main.jsx sets data-bs-theme from the device setting). */
+
+/* ---------- Base ---------- */
+/* A soft page background that adapts to light/dark mode automatically (--bs-tertiary-bg is a Bootstrap color variable). */
+body { background: var(--bs-tertiary-bg); }
+
+/* ---------- Page layout ---------- */
+/* .auth-page is centered with Bootstrap utility classes right in the JSX (d-flex, align-items-center, ...).
+   The card's width: full width on phones, but never wider than 440px on bigger screens. */
+.auth-card { max-width: 440px; }
+
+/* ---------- Accessibility ---------- */
+/* Touch targets: buttons and inputs are never shorter than 48px (guideline: at least 44px) so they're easy to tap. */
+.btn, .form-control { min-height: 48px; }
+/* Bright outline when someone navigates with the keyboard (important for accessibility).
+   Bootstrap's own focus glow is kept too; this one is stronger and easier to see. */
+:focus-visible { outline: 3px solid #ffb703; outline-offset: 2px; }
+
+/* ---------- Messages ---------- */
+/* An empty message paragraph (no error yet) takes no space at all. */
+.error:empty, .success:empty, .notice:empty { display: none; }
+
+/* ---------- Landing page (/home) ----------
+   The message and the LOG OUT button sit in the middle of an otherwise blank page.
+   (.auth-page already centers this block on the screen; here we stack and center what's inside it.) */
+.landing {
+  display: flex;
+  flex-direction: column;   /* message on top, button underneath */
+  align-items: center;      /* center each item horizontally */
+  text-align: center;       /* center the message's text if it wraps on a small screen */
+  gap: 24px;                /* space between the message and the button */
+}

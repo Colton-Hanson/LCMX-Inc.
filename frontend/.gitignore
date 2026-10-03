@@ -1,0 +1,25 @@
+# .gitignore — files/folders Git should NOT upload to GitHub.
+
+# Libraries downloaded by `npm install`. Huge, and anyone can recreate them from package.json.
+node_modules/
+
+# The production build output from `npm run build`. Recreated any time.
+dist/
+
+# Secrets and local settings (API keys, database passwords). NEVER commit these.
+.env
+.env.*
+*.local
+
+# Logs and test output
+npm-debug.log*
+coverage/
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+# Claude Code's local instruction file. Cole's choice: keep it on his machine, don't share it with the team.
+CLAUDE.md
