@@ -15,14 +15,16 @@ FLAGGED GAPS (confirm with team before treating this as final):
 from datetime import datetime
 
 from sqlalchemy import (
-    Column, BigInteger, String, Text, ForeignKey, PrimaryKeyConstraint, Numeric, DateTime
+    Column, BigInteger, String, Text, ForeignKey, PrimaryKeyConstraint, Numeric, DateTime, Boolean
 )
 from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
 from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()
+def utcnow():
+    return datetime.now(timezone.utc)
 
+Base = declarative_base()
 
 # === Users and Groups ===
 
@@ -32,7 +34,16 @@ class User(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    # new in iteration 2
+    photo_url = Column(String(512), nullable=True)
+    notify_group_invite = Column(Boolean, nullable=False, server_default="true")
+    notify_new_expense = Column(Boolean, nullable=False, server_default="true")
+    notify_settlement = Column(Boolean, nullable=False, server_default="true")
+    notify_removed_from_group = Column(Boolean, nullable=False, server_default="true")
+    email_verified = Column(Boolean, nullable=False, server_default="false")
+    pending_email = Column(String(255), nullable=True)
 
 
 class Group(Base):
@@ -49,6 +60,9 @@ class UserGroup(Base):
     group_id = Column(BigInteger, ForeignKey("groups.id"), nullable=False)
 
     __table_args__ = (PrimaryKeyConstraint("user_id", "group_id"),)
+
+    # new in iteration 2: NULL means equal split
+    split_percentage = Column(Numeric(5, 2), nullable=True)
 
 
 # === Things associated with one group ===
@@ -162,6 +176,19 @@ class Balance(Base):
     amount = Column(Numeric, nullable = False)
 
     __table_args__ = (PrimaryKeyConstraint("user_1_id", "user_2_id"),)
+
+
+# === Session tracker table
+
+class UserSession(Base):
+    __tablename__ = "sessions"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(255), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked = Column(Boolean, nullable=False, server_default="false")
 
 
 # === Audit Log ===
