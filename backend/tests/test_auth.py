@@ -3,22 +3,32 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.db.session import SessionLocal
-from models import User
+from models import User, UserSession
 
 
 TEST_EMAIL = "auth_test@example.com"
-TEST_PASSWORD = "testing123"
-
+TEST_PASSWORD = "TestPassword123!"
 
 def delete_test_user():
     db = SessionLocal()
 
     try:
-        db.query(User).filter(User.email == TEST_EMAIL).delete()
-        db.commit()
+        user = (
+            db.query(User)
+            .filter(User.email == TEST_EMAIL)
+            .first()
+        )
+
+        if user:
+            db.query(UserSession).filter(
+                UserSession.user_id == user.id
+            ).delete()
+
+            db.delete(user)
+            db.commit()
+
     finally:
         db.close()
-
 
 @pytest.fixture(autouse=True)
 def clean_test_user():
