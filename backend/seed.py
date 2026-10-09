@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app.core.security import hash_password
 
 from models import User, Group, UserGroup
 
@@ -18,11 +19,17 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-# NOTE: plaintext placeholders for seed convenience only. Real registrations
-# must go through the hashing flow Lukas builds — never store plaintext
-# passwords outside of this throwaway seed data.
-alice = User(email="alice@example.com", password="placeholder_hash_1")
-bob = User(email="bob@example.com", password="placeholder_hash_2")
+# Development-only seed accounts. Passwords are hashed before storage
+# using the same password hashing flow as normal registration.
+alice = User(
+    email="alice@example.com",
+    password_hash=hash_password("AlicePassword123!"),
+)
+
+bob = User(
+    email="bob@example.com",
+    password_hash=hash_password("BobPassword123!"),
+)
 
 roommates = Group()
 
