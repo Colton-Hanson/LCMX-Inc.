@@ -1,9 +1,19 @@
-// api.test.js — checks that auth.js sends exactly what Lukas's backend expects.
+// auth.test.js — checks that auth.js sends exactly what the backend expects.
 // `fetch` (the browser's network call) is replaced with a fake that records what it was asked to send,
 // so no server is needed. Run with: npm test
 
 import { vi } from 'vitest';
-import { registerUser, loginUser, getCurrentUser, logoutUser } from '../src/api/auth.js';
+import {
+  registerUser,
+  loginUser,
+  getCurrentUser,
+  logoutUser,
+  getProfile,
+  updateProfile,
+  requestEmailChange,
+  confirmEmailChange,
+  changePassword,
+} from '../src/api/auth.js';
 
 // Builds a fake fetch response like the real one: has .ok, .status and a .json() method.
 function fakeResponse(status, body) {
@@ -21,7 +31,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals()); // put the real fetch back
 
-describe('auth.js talks to the real backend routes', () => {
+describe('auth.js sends the routes the backend expects', () => {
   it('registerUser POSTs { email, password } to /api/auth/register and nothing else', async () => {
     fetchMock.mockResolvedValue(fakeResponse(201, { id: 1, email: 'cole@umkc.edu' }));
     const result = await registerUser({ email: 'cole@umkc.edu', password: 'Abcdefg!', confirm: 'Abcdefg!' });
@@ -83,5 +93,52 @@ describe('auth.js talks to the real backend routes', () => {
     fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
     const result = await loginUser({ email: 'a@b.co', password: 'x' });
     expect(result).toEqual({ ok: false, status: 0, network: true });
+  });
+});
+
+describe('auth.js profile routes', () => {
+  it('getProfile GETs /api/profile with the cookie', async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, { id: 1, name: 'Cole' }));
+    const result = await getProfile();
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/profile');
+    expect(options.method).toBe('GET');
+    expect(options.credentials).toBe('include');
+    expect(result.data).toEqual({ id: 1, name: 'Cole' });
+  });
+
+  it('updateProfile PATCHes only the fields it is given', async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, {}));
+    await updateProfile({ name: 'Cole' });
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/profile');
+    expect(options.method).toBe('PATCH');
+    expect(JSON.parse(options.body)).toEqual({ name: 'Cole' });
+  });
+
+  it('requestEmailChange POSTs { new_email } trimmed and lowercased', async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, { message: 'ok' }));
+    await requestEmailChange('  New@UMKC.edu ');
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/profile/email-change');
+    expect(options.method).toBe('POST');
+    expect(JSON.parse(options.body)).toEqual({ new_email: 'new@umkc.edu' });
+  });
+
+  it('confirmEmailChange POSTs { token } with surrounding spaces removed', async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, {}));
+    await confirmEmailChange('  abc123 ');
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/profile/email-change/confirm');
+    expect(JSON.parse(options.body)).toEqual({ token: 'abc123' });
+  });
+
+  it('changePassword POSTs current_password and new_password to /api/auth/change-password', async () => {
+    fetchMock.mockResolvedValue(fakeResponse(200, {}));
+    await changePassword({ currentPassword: 'Oldpass1!', newPassword: 'Newpass1!' });
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/auth/change-password');
+    expect(options.method).toBe('POST');
+    expect(JSON.parse(options.body)).toEqual({ current_password: 'Oldpass1!', new_password: 'Newpass1!' });
   });
 });

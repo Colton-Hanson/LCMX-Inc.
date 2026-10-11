@@ -1,123 +1,77 @@
-# Group Budget Tracker — frontend (Sprint 1: SCRUM-11 Register, SCRUM-12 Login)
+# Shared Expense Management Tool — Frontend
+Sprint 1: SCRUM-11 Register, SCRUM-12 Login.
 
-React + Vite. Where it goes in the group repo: the `frontend/` folder (the main README's project structure already expects it).
+Sprint 2: SCRUM-38 Settings page, SCRUM-39 Route guards, SCRUM-40 Inline validation errors, SCRUM-41 Responsive and screen-reader pass.
 
-## Quick start — frontend only (copy and paste)
+React + Vite. Lives in the `frontend/` folder. For the database and backend setup, follow the main README.
+
+## Quick start
 Needs Node.js 20 or newer. Run these from the `frontend/` folder:
 ```
 npm install     # downloads the libraries listed in package.json (one time)
-npm test        # automated tests (no backend needed — the server is faked in tests)
+npm test        # automated tests (the tests don't need the backend running)
 npm run dev     # starts the app at http://localhost:5173
 ```
-Open http://localhost:5173. The pages load without a backend, but registering and logging in need the backend below.
-Other command: `npm run build` makes a production build in `dist/`.
+**Does the backend need to be running?** For most things, yes. The login and register pages open without it, but logging in, registering, and the home and settings pages won't work until it's up (set it up with the main README).
 
-Windows PowerShell blocking `npm`? Use `npm.cmd`, or run once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+**`npm run build`** isn't needed while developing. It's for deployment: it packs the app into plain files in a `dist/` folder that a web server can hand out.
 
-## Quick start — the whole app with the backend (register / log in for real)
-Three things have to be running: **Postgres**, the **backend**, then the **frontend**. Use two terminals.
-Steps below are for Windows PowerShell; on Mac/Linux the commands are the same except where noted.
+Windows PowerShell blocking `npm`? Use `npm.cmd` instead, or run this once in the VS Code terminal (or any PowerShell window): `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
-**Step 1 — database.** Install and start PostgreSQL, then create the database:
-```
-createdb shared_expense_dev
-```
-(If it says the password is wrong, add `-U postgres`: `createdb -U postgres shared_expense_dev`.)
+**Backend on a different port?** You only need this if you started the backend on a port other than 8000, for example with `uvicorn app.main:app --reload --port 9000`. In that case, start the frontend with the same number. In the commands below, 9000 is just the example, so type the port you used there instead:
+- Windows (PowerShell / VS Code terminal): `$env:BACKEND_URL="http://localhost:9000"; npm run dev`
+- Mac/Linux: `BACKEND_URL=http://localhost:9000 npm run dev`
 
-**Step 2 — backend, terminal 1.** From the repo root:
-```
-cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1                 # Mac/Linux: source .venv/bin/activate
-```
-Install the libraries. On Windows, skip `uvloop` (it only works on Mac/Linux, and the backend runs fine without it):
-```
-Get-Content requirements.txt | Where-Object { $_ -notmatch '^uvloop' } | Out-File $env:TEMP\req.txt -Encoding ascii
-pip install -r $env:TEMP\req.txt           # Mac/Linux: pip install -r requirements.txt
-```
-Create your private settings file, then open `backend/.env` and fill in the two values (see `.env.example`):
-```
-copy .env.example .env                     # Mac/Linux: cp .env.example .env
-python -c "import secrets; print(secrets.token_hex(32))"   # prints a random value to use as JWT_SECRET
-```
-- `DATABASE_URL` — your Postgres username, password and port (usually 5432), for example `postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/shared_expense_dev`
-- `JWT_SECRET` — the random value printed above
+**How the frontend and backend connect:** the browser only talks to the frontend (`http://localhost:5173`). Any request starting with `/api` gets passed along to the backend by the dev server in `vite.config.js`, which drops the `/api` part first (`/api/auth/login` reaches the backend as `/auth/login`).
 
-`.env` is git-ignored, so your values stay on your machine. Then build the tables and start the backend:
-```
-alembic upgrade head
-uvicorn app.main:app --reload
-```
-Check http://localhost:8000/health — it should show `{"status":"ok"}`. Leave this terminal running.
-
-**Step 3 — frontend, terminal 2.** From the repo root:
-```
-cd frontend
-npm install
-npm run dev
-```
-**Step 4 — try it.** Open http://localhost:5173, register an account. You're logged in automatically and land on a page that says **YOU HAVE SUCCESSFULLY LOGGED IN!** with a **LOG OUT** button.
-
-Backend on a different port? `BACKEND_URL=http://localhost:9000 npm run dev` (PowerShell: `$env:BACKEND_URL="http://localhost:9000"; npm run dev`).
-
-**How the two connect:** the browser calls `/api/auth/login` on the frontend's own address (:5173). In development `vite.config.js` strips `/api` and forwards it to the backend, so the backend sees `/auth/login`. One address means no CORS setup and the login cookie just works. A real deployment needs a reverse proxy doing the same.
-
-## What each page does
-| URL | Page | Notes |
+## Pages
+| URL | Page | What it does |
 |---|---|---|
-| `/register` | `RegisterPage.jsx` (SCRUM-11) | email check, masked password with live rules checklist, confirm-password check. After the account is created it logs the user in automatically (the backend's register endpoint doesn't), then goes to `/home`. |
-| `/login` | `LoginPage.jsx` (SCRUM-12) | one generic failure message for wrong email OR wrong password (no account-existence leak); separate messages for server down / too many attempts / server errors. |
-| `/home` | `HomePage.jsx` | **Temporary** landing page: blank except a centered **YOU HAVE SUCCESSFULLY LOGGED IN!** message and a **LOG OUT** button. Only shown when the backend confirms a valid login; guests are sent to `/login`. Replace the contents of its `.landing` block with the real dashboard next sprint (keep the login check). |
-| anything else | — | redirects to `/login` |
+| `/register` | `RegisterPage.jsx` (SCRUM-11) | Email and password checks, then logs the user in and goes to `/home` |
+| `/login` | `LoginPage.jsx` (SCRUM-12) | One generic message for a wrong email or password |
+| `/home` | `HomePage.jsx` | Temporary page under the signed-in top bar, to be replaced by the real dashboard |
+| `/settings` | `SettingsPage.jsx` (SCRUM-38, SCRUM-40) | Three cards: Profile, Password and Notifications. Errors show under the field they belong to. |
+| | Profile card | Name and email. Changing the email asks for a verification code first. |
+| | Password card | Hidden until "Change password" is pressed. A change logs the user out everywhere, so they log in again. |
+| | Notifications card | Four checkboxes for which notifications to get |
+| anything else | — | Redirects to `/login` |
 
-## What's in each file
+**Route guard (SCRUM-39).** `RequireAuth.jsx` is a wrapper that protects the pages inside it (`/home` and `/settings`). When one of them opens, it checks with the backend that the user has a valid session, and only then shows the page along with the signed-in top bar and the user's profile.
+- Guests get redirected to `/login` with a "Log in to continue." message.
+- If a session expires while a page is open, the user is sent to `/login` with "Your session ended. Log in to continue." This happens on the next request the server rejects with a 401, or when they switch back to the browser tab.
+- Adding a page that needs a login later? In `App.jsx`, list it with the other protected pages (the group that already holds `/home` and `/settings`). It gets the login check automatically.
+
+## Files
 | File | What it does |
 |---|---|
-| `index.html` | The one HTML page; React draws into its `<div id="root">` |
-| `src/main.jsx` | Starts the app |
-| `src/App.jsx` | Which page shows at which URL |
-| `src/pages/*.jsx` | The pages above |
-| `src/components/*` | Reusable pieces: email box, password box, live password-rules list |
-| `src/lib/validators.js` | Rules for emails/passwords (edit `PASSWORD_RULES` to add a rule) |
-| `src/api/auth.js` | **The only file that talks to the backend** — routes, request shape, status handling |
-| `src/styles.css` | Our own small CSS (page background, 48px touch targets, landing layout). Most of the look comes from Bootstrap, which `src/main.jsx` loads first |
-| `vite.config.js` | Dev-server settings, incl. the `/api` -> backend proxy |
-| `tests/*` | Automated tests (validators, `src/api/auth.js`, both forms, the landing page) + `tests/setup.js` |
+| `index.html` | The one HTML page. React draws the app into it. |
+| `src/main.jsx` | Starts the app and loads the fonts, Bootstrap and `styles.css` |
+| `src/App.jsx` | Which page shows at which URL, and which pages need a login |
+| `src/pages/` | The four pages: Register, Login, Home, Settings |
+| `src/components/AppHeader.jsx` | The top bar: logo, app name, and when signed in, the Home link and account menu |
+| `src/components/RequireAuth.jsx` | The route guard described above |
+| `src/components/` (others) | Logo, text box, email box, password box, and the checklist that shows the password rules as you type |
+| `src/lib/validators.js` | Where the rules for emails, passwords and names are defined. The forms and the password checklist both use them. |
+| `src/lib/apiErrors.js` | Turns a failed backend reply into a message for the user |
+| `src/lib/initials.js` | The letters shown in the round profile circle |
+| `src/lib/usePageTitle.js` | Sets the browser tab title for each page |
+| `src/api/auth.js` | **The only file that talks to the backend.** Every request lives here as a small function (like `loginUser`), and the pages just call those functions. If a backend route changes, this is the one file to update. |
+| `src/styles.css` | Our CSS (dark teal theme). Everything else comes from Bootstrap. |
+| `vite.config.js` | Dev-server settings, including the `/api` forwarding |
+| `tests/` | Automated tests for the forms, pages, route guard, validators and `auth.js` |
 
-## Folder layout (matches the structure in the main README)
-```
-frontend/
-├── src/
-│   ├── api/          auth.js — every backend call
-│   ├── components/   email box, password box, password-rules list
-│   ├── pages/        RegisterPage, LoginPage, HomePage
-│   ├── lib/          validators.js — email/password rules (not in the main README's diagram; fine to move)
-│   ├── App.jsx, main.jsx, styles.css
-├── tests/            all automated tests + setup.js
-├── index.html, vite.config.js, package.json, package-lock.json, .gitignore, README.md
-```
-
-## Backend routes this frontend uses (confirmed against `backend/app/api/routes/auth.py`)
+## Backend routes this frontend uses
 | Call | Route | Success | Failures the UI handles |
 |---|---|---|---|
 | `registerUser` | `POST /auth/register` `{email, password}` | 201 | 409 duplicate email, 422 rejected data |
 | `loginUser` | `POST /auth/login` `{email, password}` | 200 + `access_token` httpOnly cookie | 401 (same reply for bad email or bad password) |
 | `getCurrentUser` | `GET /auth/me` | 200 `{id, email}` | 401 not logged in |
-| `logoutUser` | `POST /auth/logout` | 200 | network failure (the page says it couldn't log you out) |
+| `logoutUser` | `POST /auth/logout` | 200 | network failure |
+| `getProfile` | `GET /profile` | 200 profile | 401 sends the user to login |
+| `updateProfile` | `PATCH /profile` (name, photo_url, `notify_*`) | 200 profile | 422 blank or too long name, 401 |
+| `requestEmailChange` | `POST /profile/email-change` `{new_email}` | 200 `{message, verification_token}` | 400 same email, 409 already in use, 422 not an email |
+| `confirmEmailChange` | `POST /profile/email-change/confirm` `{token}` | 200 | 400 wrong or expired code, 409 |
+| `changePassword` | `POST /auth/change-password` `{current_password, new_password}` | 200 (all sessions end) | 400 wrong current password, 422 weak new password |
 
-Search the project for **`BACKEND HOOK`** to find every spot that depends on the backend.
-
-## Notes for the team (found while connecting the two halves)
-Flagged for whoever works on the backend next. They're observations, not blame — the frontend works around the first two.
-1. **Emails are case-sensitive on the server.** `COLE@x.com` registers as a second account next to `cole@x.com`. The frontend lowercases emails before sending; the backend should normalise too.
-2. **Server only enforces password length ≥ 8.** The requirements also say 1 capital + 1 symbol; the browser enforces those, but a direct call to the API can still create an account with a weak password like `password`. Mirror `PASSWORD_RULES` (in `src/lib/validators.js`) in the backend's `RegisterRequest`.
-3. **Register doesn't start a session** (no cookie). The frontend logs in right after registering. If the backend ever does this itself, the extra login call can be removed from `RegisterPage.jsx`.
-4. **Cookie is `secure=False`** (fine for http://localhost). Needs `secure=True` once the app is served over HTTPS.
-5. **Route guards for every page are SCRUM-39** (Sprint 2). Only `/home` checks login for now.
-6. **`uvloop` in `backend/requirements.txt` can't install on Windows**, so `pip install -r requirements.txt` fails there. The Quick start above skips that one line. Marking it Mac/Linux-only in the file (`uvloop==0.22.1; sys_platform != "win32"`) would let everyone use the same command.
-
-## package.json, explained (JSON can't contain comments)
-- `scripts` — the shortcuts above (`npm run dev`, `npm test`, `npm run build`).
-- `dependencies` — libraries the app ships with: `react`, `react-dom`, `react-router-dom` (page routing), `bootstrap` (the team's one CSS framework; CSS only, we don't use its JavaScript).
-- `devDependencies` — tools used only while developing: `vite` (dev server + build), `vitest` + `jsdom` + `@testing-library/*` (testing).
-- `"type": "module"` — lets files use modern `import` / `export` syntax.
+---
+Formatted with AI, all information is original and did not change.

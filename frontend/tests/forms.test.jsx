@@ -11,7 +11,7 @@ import LoginPage from '../src/pages/LoginPage.jsx';
 import * as api from '../src/api/auth.js';
 
 // Replace the real auth.js with fakes. Each fake does nothing until a test tells it what to "return".
-// This is exactly the spot that stands in for Lukas's backend during testing.
+// This is exactly the spot that stands in for the backend during testing.
 vi.mock('../src/api/auth.js');
 
 // Helper: draw the pages inside a tiny router starting at `path`. "/home" just shows the word HOME,
@@ -75,7 +75,7 @@ describe('Registration (SCRUM-11)', () => {
     await waitFor(() => expect(screen.getByText('HOME')).toBeInTheDocument()); // redirected home
     // The server received the email and password (and NOT the confirm field):
     expect(api.registerUser).toHaveBeenCalledWith({ email: 'cole@umkc.edu', password: 'Abcdefg!' });
-    // Lukas's register endpoint doesn't start a session, so the form logs in right after registering:
+    // The register endpoint doesn't start a session, so the form logs in right after registering:
     expect(api.loginUser).toHaveBeenCalledWith({ email: 'cole@umkc.edu', password: 'Abcdefg!' });
   });
 

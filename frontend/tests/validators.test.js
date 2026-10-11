@@ -1,6 +1,6 @@
 // validators.test.js — automated tests for the input-checking functions in validators.js.
 // Run with: npm test.  `describe` groups related tests, `it` is one test, `expect` is the check.
-import { validateEmail, validatePassword, validateConfirm, checkPasswordRules } from '../src/lib/validators.js';
+import { validateEmail, validatePassword, validateConfirm, checkPasswordRules, validateName } from '../src/lib/validators.js';
 
 describe('validateEmail', () => {
   it('rejects empty and malformed emails', () => {
@@ -32,5 +32,19 @@ describe('validateConfirm', () => {
     expect(validateConfirm('Abcdefg!', '')).not.toBe('');          // confirm left empty
     expect(validateConfirm('Abcdefg!', 'Abcdefg?')).not.toBe('');  // doesn't match
     expect(validateConfirm('Abcdefg!', 'Abcdefg!')).toBe('');      // matches
+  });
+});
+
+describe('validateName', () => {
+  it('accepts a normal name and trims spaces', () => {
+    expect(validateName('  Cole Hanson ')).toBe('');
+  });
+  it('rejects a blank name', () => {
+    expect(validateName('')).toBe('Enter your name.');
+    expect(validateName('   ')).toBe('Enter your name.');
+  });
+  it('rejects more than 255 characters but allows exactly 255', () => {
+    expect(validateName('a'.repeat(255))).toBe('');
+    expect(validateName('a'.repeat(256))).toBe('Name must be 255 characters or fewer.');
   });
 });

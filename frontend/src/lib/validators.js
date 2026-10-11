@@ -14,11 +14,14 @@
 //   $            end of the text
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// Shown under the email box when the format is wrong. Also reused when the server rejects an email.
+export const EMAIL_FORMAT_MESSAGE = 'Enter a valid email address, like name@example.com.';
+
 export function validateEmail(email) {
   // `?? ''` means "if email is null/undefined, use an empty string"; trim() removes spaces at the ends.
   const value = (email ?? '').trim();
   if (!value) return 'Enter your email address.'; // nothing typed
-  if (!EMAIL_RE.test(value)) return 'Enter a valid email address, like name@example.com.'; // wrong shape
+  if (!EMAIL_RE.test(value)) return EMAIL_FORMAT_MESSAGE; // wrong shape
   return ''; // '' = no error
 }
 
@@ -50,5 +53,14 @@ export function validatePassword(password) {
 export function validateConfirm(password, confirm) {
   if (!confirm) return 'Re-enter your password.';
   if (password !== confirm) return 'Passwords don’t match.';
+  return '';
+}
+
+// A display name must not be blank and must fit the server's 255-character limit.
+export const NAME_MAX_LENGTH = 255;
+export function validateName(name) {
+  const value = (name ?? '').trim();
+  if (!value) return 'Enter your name.';
+  if (Array.from(value).length > NAME_MAX_LENGTH) return `Name must be ${NAME_MAX_LENGTH} characters or fewer.`;
   return '';
 }
