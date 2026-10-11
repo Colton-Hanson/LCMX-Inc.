@@ -1,81 +1,82 @@
-// =====================================================================================
-// auth.js — THE ONLY FILE THAT TALKS TO THE BACKEND.
-// Every page calls the small functions at the bottom (registerUser, loginUser, ...) and never
-// uses fetch() directly, so if a route changes you fix it HERE and nothing else.
+// All backend calls live in this file. Pages import the small functions at the bottom and never call
+// fetch directly, so a route change only has to be made here.
 //
-// CONFIRMED AGAINST LUKAS'S BACKEND (FastAPI, repo commit 1a49ffc, backend/app/api/routes/auth.py):
-//   POST /auth/register  { email, password }  -> 201 { id, email }
-//                                                409 duplicate email | 422 invalid body
-//   POST /auth/login     { email, password }  -> 200 { message, user: { id, email } } + sets cookie
-//                                                401 bad email OR bad password (same message for both)
-//   GET  /auth/me                             -> 200 { id, email } | 401 not logged in
-//   POST /auth/logout                         -> 200 { message } (clears the cookie)
-//   Session = an httpOnly cookie named "access_token" (JWT, 8 hours). JavaScript can't read it —
-//   that's the point — so the browser just attaches it for us (see `credentials: 'include'`).
+// Every function resolves to { ok, status, data?, network? }:
+//   ok       true for a 2xx response
+//   status   HTTP status code (0 when the request never reached the server)
+//   data     parsed JSON body, or null when there is none
+//   network  true when the server could not be reached at all
 //
-// WHAT EVERY FUNCTION BELOW RETURNS: { ok, status, data?, network? }
-//   ok       true when the HTTP status was 2xx
-//   status   the HTTP status code (0 if the request never reached the server)
-//   data     the parsed JSON body, or null if there wasn't one
-//   network  true when the server could not be reached at all (offline / server not running)
+// Routes used:
+//   POST /auth/register   POST /auth/login   GET /auth/me   POST /auth/logout   POST /auth/change-password
+//   GET /profile   PATCH /profile   POST /profile/email-change   POST /profile/email-change/confirm
 //
-// WHY THE "/api" PREFIX?
-//   The browser calls /api/auth/login on the SAME address as the page (http://localhost:5173).
-//   In development, vite.config.js strips "/api" and forwards the call to the backend
-//   (default http://localhost:8000), so the backend itself still sees plain /auth/login.
-//   Same address = no CORS problems and the login cookie just works.
-//   For a real deployment, put a reverse proxy in front that does the same thing.
-// =====================================================================================
+// Requests use the /api prefix. In development, vite.config.js strips it and forwards the call to the
+// backend, so the browser only talks to its own origin and the httpOnly session cookie is sent automatically.
 
-// All backend paths live here, in one place.
-const API_PREFIX = '/api'; // BACKEND HOOK: must match the proxy in vite.config.js
+const API_PREFIX = '/api'; // must match the proxy in vite.config.js
 const REGISTER_PATH = `${API_PREFIX}/auth/register`;
 const LOGIN_PATH = `${API_PREFIX}/auth/login`;
 const ME_PATH = `${API_PREFIX}/auth/me`;
 const LOGOUT_PATH = `${API_PREFIX}/auth/logout`;
+const CHANGE_PASSWORD_PATH = `${API_PREFIX}/auth/change-password`;
+const PROFILE_PATH = `${API_PREFIX}/profile`;
 
-// The backend compares emails exactly as typed, so "Cole@UMKC.edu" and "cole@umkc.edu" would be treated
-// as two different people. We always send trimmed, lowercase emails so the same person can't end up with
-// two accounts, and so logging in never depends on remembering capital letters.
-// (Flagged for the backend: normalise emails on the server too — see README "Notes for the team".)
+// Emails are sent trimmed and lowercase so one person cannot end up with two accounts.
 const normalizeEmail = (email) => String(email ?? '').trim().toLowerCase();
 
-// One shared helper for every request. `body` is optional (GET and logout send none).
+// Shared request helper. `body` is optional (GET and logout send none).
 async function request(method, path, body) {
   let res;
   try {
     res = await fetch(path, {
       method,
-      // Only say "this is JSON" when we actually send JSON.
       headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      credentials: 'include', // keeps the httpOnly session cookie (needed for login, /me and logout)
+      credentials: 'include', // sends the session cookie
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    // fetch() only throws when the request never completed (server down, offline, blocked).
+    // fetch only throws when the request never completed (server down, offline, blocked).
     return { ok: false, status: 0, network: true };
   }
   let data = null;
   try {
     data = await res.json();
   } catch {
-    /* empty or non-JSON body — that's fine, data stays null */
+    // Empty or non-JSON body: data stays null.
   }
   return { ok: res.ok, status: res.status, data };
 }
 
-// SCRUM-13 (Lukas): create an account. The "confirm password" box is checked in the browser only and is NOT sent.
-// NOTE: registering does NOT log you in (the backend sets no cookie here) — RegisterPage logs in right after.
+// Creates an account. This does not start a session; call loginUser afterwards.
 export const registerUser = ({ email, password }) =>
   request('POST', REGISTER_PATH, { email: normalizeEmail(email), password });
 
-// SCRUM-15 (Lukas): log in. On success the backend sets the session cookie.
-// On failure it answers 401 with the same message whether the email or the password was wrong.
+// Logs in. On success the server sets the session cookie.
 export const loginUser = ({ email, password }) =>
   request('POST', LOGIN_PATH, { email: normalizeEmail(email), password });
 
-// Who is logged in right now? 200 { id, email } if the cookie is valid, 401 if not. Used by the Home page.
+// Returns { id, email } for a valid session, or 401 when nobody is logged in.
 export const getCurrentUser = () => request('GET', ME_PATH);
 
-// Ends the session: the backend deletes the cookie.
+// Ends the session (the server clears the cookie).
 export const logoutUser = () => request('POST', LOGOUT_PATH);
+
+// Returns { id, name, email, photo_url, notify_*, email_verified, pending_email }.
+export const getProfile = () => request('GET', PROFILE_PATH);
+
+// Updates any of: name, photo_url, notify_group_invite, notify_new_expense, notify_settlement,
+// notify_removed_from_group. Fields that are left out stay unchanged. Email is changed separately.
+export const updateProfile = (fields) => request('PATCH', PROFILE_PATH, fields);
+
+// Starts an email change. The response includes a verification_token until real email delivery exists.
+export const requestEmailChange = (newEmail) =>
+  request('POST', `${PROFILE_PATH}/email-change`, { new_email: normalizeEmail(newEmail) });
+
+// Completes an email change with the verification token.
+export const confirmEmailChange = (token) =>
+  request('POST', `${PROFILE_PATH}/email-change/confirm`, { token: String(token ?? '').trim() });
+
+// Changes the password. On success the server ends every session, so the user must log in again.
+export const changePassword = ({ currentPassword, newPassword }) =>
+  request('POST', CHANGE_PASSWORD_PATH, { current_password: currentPassword, new_password: newPassword });

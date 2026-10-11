@@ -1,93 +1,120 @@
-// home.test.jsx — tests for the temporary landing page (/home): its login check, message and LOG OUT button.
-// Like forms.test.jsx, the backend is FAKED (mocked) so no server is needed. Run with: npm test
+// Tests for the home page: session check, top bar, account menu and log out.
+// The API module is mocked, so no backend is needed. Run with: npm test
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { vi } from 'vitest';
 import HomePage from '../src/pages/HomePage.jsx';
+import RequireAuth from '../src/components/RequireAuth.jsx';
 import * as api from '../src/api/auth.js';
 
-vi.mock('../src/api/auth.js'); // replace the real auth.js with do-nothing fakes
+vi.mock('../src/api/auth.js');
 
-const MESSAGE = 'YOU HAVE SUCCESSFULLY LOGGED IN!';
-
-// Draw Home inside a tiny router. "/login" just shows the words LOGIN PAGE so a test can confirm a redirect happened.
+// Renders Home inside a small router. "/login" shows plain text so a test can confirm a redirect.
 function renderHome() {
   return render(
     <MemoryRouter initialEntries={['/home']}>
       <Routes>
-        <Route path="/home" element={<HomePage />} />
+        <Route element={<RequireAuth />}>
+          <Route path="/home" element={<HomePage />} />
+        </Route>
         <Route path="/login" element={<h1>LOGIN PAGE</h1>} />
       </Routes>
     </MemoryRouter>
   );
 }
 
-// A fake "logged in" answer from GET /auth/me.
-const loggedIn = { ok: true, status: 200, data: { id: 1, email: 'cole@umkc.edu' } };
+const loggedIn = { ok: true, status: 200, data: { id: 1, name: 'Cole Hanson', email: 'cole@umkc.edu' } };
 
-beforeEach(() => vi.resetAllMocks()); // wipe the fakes so one test can't affect the next
+beforeEach(() => vi.resetAllMocks());
 
-describe('Temporary landing page', () => {
-  it('shows the success message and a LOG OUT button once the backend confirms a valid login', async () => {
-    api.getCurrentUser.mockResolvedValue(loggedIn);
+describe('Home page', () => {
+  it('shows the page heading and the signed-in top bar once the session is confirmed', async () => {
+    api.getProfile.mockResolvedValue(loggedIn);
     renderHome();
-    expect(await screen.findByRole('heading', { name: MESSAGE })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'LOG OUT' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Home Page' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Account menu/ })).toBeInTheDocument();
   });
 
-  it('is otherwise blank: the only control is the LOG OUT button', async () => {
-    api.getCurrentUser.mockResolvedValue(loggedIn);
-    renderHome();
-    await screen.findByText(MESSAGE);
-    expect(screen.getAllByRole('button')).toHaveLength(1);
-    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
-    expect(screen.queryAllByRole('link')).toHaveLength(0);
+  it('keeps the signed-in top bar layout while the page is still loading', () => {
+    api.getProfile.mockReturnValue(new Promise(() => {})); // never answers, so the page stays in its loading state
+    const { container } = renderHome();
+    expect(container.querySelector('.app-header--signed-in')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Account menu/ })).not.toBeInTheDocument();
   });
 
-  it('puts the message and the button in the centered landing block', async () => {
-    api.getCurrentUser.mockResolvedValue(loggedIn);
+  it('shows the app name and logo link in the top bar', async () => {
+    api.getProfile.mockResolvedValue(loggedIn);
     renderHome();
-    const heading = await screen.findByRole('heading', { name: MESSAGE });
-    const button = screen.getByRole('button', { name: 'LOG OUT' });
-    expect(heading.parentElement).toHaveClass('landing'); // .landing is centered in styles.css
-    expect(button.parentElement).toBe(heading.parentElement); // same block: message above, button below
+    await screen.findByRole('heading', { name: 'Home Page' });
+    expect(screen.getByRole('link', { name: /Shared Expense Management Tool/ })).toHaveAttribute('href', '/home');
+  });
+
+  it('opens the account menu with the signed-in email and closes it with Escape', async () => {
+    api.getProfile.mockResolvedValue(loggedIn);
+    const user = userEvent.setup();
+    renderHome();
+    const button = await screen.findByRole('button', { name: /Account menu/ });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(button);
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('cole@umkc.edu')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'Log out' })).toBeNull();
+    expect(button).toHaveFocus();
+  });
+
+  it('closes the account menu when the user presses outside it', async () => {
+    api.getProfile.mockResolvedValue(loggedIn);
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(await screen.findByRole('button', { name: /Account menu/ }));
+    await user.click(screen.getByRole('heading', { name: 'Home Page' }));
+    expect(screen.queryByRole('button', { name: 'Log out' })).toBeNull();
   });
 
   it('logs out and returns to the login page', async () => {
-    api.getCurrentUser.mockResolvedValue(loggedIn);
+    api.getProfile.mockResolvedValue(loggedIn);
     api.logoutUser.mockResolvedValue({ ok: true, status: 200 });
     const user = userEvent.setup();
     renderHome();
-    await user.click(await screen.findByRole('button', { name: 'LOG OUT' }));
+    await user.click(await screen.findByRole('button', { name: /Account menu/ }));
+    await user.click(screen.getByRole('button', { name: 'Log out' }));
     await waitFor(() => expect(screen.getByText('LOGIN PAGE')).toBeInTheDocument());
     expect(api.logoutUser).toHaveBeenCalledTimes(1);
   });
 
-  it('stays put and says so if the log out request fails', async () => {
-    api.getCurrentUser.mockResolvedValue(loggedIn);
+  it('stays on the page and shows an error if the log out request fails', async () => {
+    api.getProfile.mockResolvedValue(loggedIn);
     api.logoutUser.mockResolvedValue({ ok: false, status: 0, network: true });
     const user = userEvent.setup();
     renderHome();
-    await user.click(await screen.findByRole('button', { name: 'LOG OUT' }));
+    await user.click(await screen.findByRole('button', { name: /Account menu/ }));
+    await user.click(screen.getByRole('button', { name: 'Log out' }));
     expect(await screen.findByText(/couldn’t log you out/i)).toBeInTheDocument();
-    expect(screen.queryByText('LOGIN PAGE')).toBeNull(); // must NOT pretend they're logged out
-    expect(screen.getByText(MESSAGE)).toBeInTheDocument(); // still on the landing page
+    expect(screen.queryByText('LOGIN PAGE')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Home Page' })).toBeInTheDocument();
   });
 
-  it('never shows the success message to guests: 401 goes to the login page', async () => {
-    api.getCurrentUser.mockResolvedValue({ ok: false, status: 401, data: { detail: 'Authentication required.' } });
+  it('redirects guests to the login page (401)', async () => {
+    api.getProfile.mockResolvedValue({ ok: false, status: 401, data: { detail: 'Authentication required.' } });
     renderHome();
     expect(await screen.findByText('LOGIN PAGE')).toBeInTheDocument();
-    expect(screen.queryByText(MESSAGE)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Home Page' })).toBeNull();
   });
 
-  it('does not claim success when the backend cannot be reached', async () => {
-    api.getCurrentUser.mockResolvedValue({ ok: false, status: 0, network: true });
+  it('shows an error instead of the page when the backend cannot be reached', async () => {
+    api.getProfile.mockResolvedValue({ ok: false, status: 0, network: true });
     renderHome();
     expect(await screen.findByText(/couldn’t reach the server/i)).toBeInTheDocument();
-    expect(screen.queryByText(MESSAGE)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Home Page' })).toBeNull();
     expect(screen.queryByText('LOGIN PAGE')).toBeNull();
   });
 });

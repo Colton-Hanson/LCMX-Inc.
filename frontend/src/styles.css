@@ -1,34 +1,359 @@
-/* styles.css — our own small CSS. Most of the look now comes from Bootstrap (the team's "1 CSS framework"),
-   which main.jsx loads just before this file. Only the things Bootstrap doesn't do for us live here.
-   Bootstrap handles light/dark colors too (main.jsx sets data-bs-theme from the device setting). */
+/* Theme: Warm Teal (dark). Bootstrap provides the base components; this file sets the design
+   tokens and overrides Bootstrap's variables so its components pick up the theme. */
 
-/* ---------- Base ---------- */
-/* A soft page background that adapts to light/dark mode automatically (--bs-tertiary-bg is a Bootstrap color variable). */
-body { background: var(--bs-tertiary-bg); }
+/* ---------- Design tokens ---------- */
+:root {
+  --teal: #3bb4b0;
+  --teal-hover: #5cc7c3;
+  --teal-link: #7fd6d2;
+  --teal-soft: #12302f;
+  --on-teal: #06201f;
 
-/* ---------- Page layout ---------- */
-/* .auth-page is centered with Bootstrap utility classes right in the JSX (d-flex, align-items-center, ...).
-   The card's width: full width on phones, but never wider than 440px on bigger screens. */
+  --page: #0e1317;
+  --surface: #151c22;
+  --raised: #1c252c;
+  --line: #2b363f;
+
+  --text: #e3e8ec;
+  --text-muted: rgba(227, 232, 236, 0.74);
+
+  --ok: #75b798;
+  --error: #ff8a80;
+  --focus: #ffb703;
+  --avatar: #6aa5ee;
+  --on-avatar: #0e1317;
+
+  --font-heading: 'Red Hat Display', 'Hanken Grotesk', system-ui, sans-serif;
+  --font-body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --header-h: 64px;
+}
+
+/* ---------- Bootstrap variable overrides ---------- */
+[data-bs-theme='dark'] {
+  --bs-body-bg: var(--page);
+  --bs-body-color: var(--text);
+  --bs-body-font-family: var(--font-body);
+  --bs-secondary-color: var(--text-muted);
+  --bs-border-color: var(--line);
+  --bs-link-color-rgb: 127, 214, 210;
+  --bs-link-hover-color-rgb: 92, 199, 195;
+  /* Text utilities (.text-danger, .text-success) read these RGB values. */
+  --bs-danger-rgb: 255, 138, 128;
+  --bs-success-rgb: 117, 183, 152;
+  --bs-form-invalid-color: var(--error);
+  --bs-form-invalid-border-color: var(--error);
+}
+
+/* ---------- Typography ---------- */
+h1, h2, h3, .h1, .h2, .h3 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+}
+h1 { letter-spacing: 0.01em; }
+.auth-card h1 { font-size: 2rem; }
+/* On narrow phones the page title scales down so it stays on one line (never below 1.5rem). */
+@media (max-width: 420px) {
+  .auth-card h1 { font-size: clamp(1.5rem, 7vw, 2rem); }
+}
+.form-label { display: block; }
+
+/* ---------- Layout ---------- */
+/* The page area fills the screen below the top bar (dvh accounts for mobile browser toolbars). */
+.page-main {
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100dvh - var(--header-h));
+}
+
+/* Cards and forms are full width on phones and never wider than 440px on larger screens. */
 .auth-card { max-width: 440px; }
 
-/* ---------- Accessibility ---------- */
-/* Touch targets: buttons and inputs are never shorter than 48px (guideline: at least 44px) so they're easy to tap. */
-.btn, .form-control { min-height: 48px; }
-/* Bright outline when someone navigates with the keyboard (important for accessibility).
-   Bootstrap's own focus glow is kept too; this one is stronger and easier to see. */
-:focus-visible { outline: 3px solid #ffb703; outline-offset: 2px; }
+/* On short screens (small phones, landscape) tighten vertical spacing so the form fits with little or no scrolling.
+   Bootstrap's spacing utilities use !important, so these rules need it too. */
+@media (max-height: 700px) {
+  :root { --header-h: 48px; }
+  .page-main { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+  .auth-card .card-body { padding: 0.75rem 1rem !important; }
+  .auth-card .field.mb-3 { margin-bottom: 0.75rem !important; }
+  .auth-card .subtitle { margin-bottom: 0.75rem !important; }
+  .auth-card .alt { margin-top: 0.75rem !important; }
+}
+
+.card {
+  --bs-card-bg: var(--surface);
+  --bs-card-border-color: var(--line);
+  --bs-card-border-radius: 12px;
+  --bs-card-inner-border-radius: 11px;
+}
+
+/* ---------- Form controls ---------- */
+.form-control.form-control-lg {
+  min-height: 46px;
+  font-size: 1rem;
+  border-radius: 8px;
+  background-color: var(--surface);
+}
+.form-control:focus,
+.form-control:focus-visible {
+  background-color: var(--surface);
+  border-color: var(--teal);
+  box-shadow: none;
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+.form-control.is-invalid:focus {
+  border-color: var(--error);
+  box-shadow: none;
+  outline-color: var(--error);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  --bs-btn-border-radius: 8px;
+  min-height: 48px; /* Minimum touch target size. */
+  font-weight: 700;
+}
+.btn.btn-lg { font-size: 1.0625rem; }
+.btn-primary {
+  --bs-btn-bg: var(--teal);
+  --bs-btn-border-color: var(--teal);
+  --bs-btn-color: var(--on-teal);
+  --bs-btn-hover-bg: var(--teal-hover);
+  --bs-btn-hover-border-color: var(--teal-hover);
+  --bs-btn-hover-color: var(--on-teal);
+  --bs-btn-active-bg: var(--teal-hover);
+  --bs-btn-active-border-color: var(--teal-hover);
+  --bs-btn-active-color: var(--on-teal);
+  --bs-btn-disabled-bg: var(--teal);
+  --bs-btn-disabled-border-color: var(--teal);
+  --bs-btn-disabled-color: var(--on-teal);
+  --bs-btn-focus-shadow-rgb: 59, 180, 176;
+}
+
+/* ---------- Keyboard focus ---------- */
+/* High-contrast outline for keyboard users. Bootstrap removes the outline on buttons, so it is restored here. */
+:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Logo ---------- */
+.logo-mark { flex: none; shape-rendering: geometricPrecision; }
+.logo-mark path,
+.logo-mark circle {
+  stroke: var(--surface);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.logo-mark circle { fill: none; }
 
 /* ---------- Messages ---------- */
-/* An empty message paragraph (no error yet) takes no space at all. */
+/* Empty message paragraphs take no space. */
 .error:empty, .success:empty, .notice:empty { display: none; }
 
-/* ---------- Landing page (/home) ----------
-   The message and the LOG OUT button sit in the middle of an otherwise blank page.
-   (.auth-page already centers this block on the screen; here we stack and center what's inside it.) */
-.landing {
+/* ---------- Top bar ---------- */
+.app-header {
   display: flex;
-  flex-direction: column;   /* message on top, button underneath */
-  align-items: center;      /* center each item horizontally */
-  text-align: center;       /* center the message's text if it wraps on a small screen */
-  gap: 24px;                /* space between the message and the button */
+  align-items: center;
+  gap: 8px;
+  height: var(--header-h);
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.app-brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 10px;
+  min-width: 44px;
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+.app-brand:hover { color: var(--text); }
+.app-brand .logo-mark { width: 32px; height: 32px; }
+.app-brand-name {
+  overflow: hidden;
+  font-size: 0.9375rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* On very small screens the signed-in bar drops the name to make room for the menu. */
+.app-header--signed-in .app-brand-name { display: none; }
+
+.app-nav { display: flex; align-items: center; gap: 4px; flex: none; margin-left: 4px; }
+.app-nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+.app-nav-link:hover { background: var(--raised); color: var(--text-muted); }
+.app-nav-link.active { background: var(--teal-soft); color: var(--teal-link); }
+
+.account-menu { position: relative; margin-left: auto; }
+.account-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.account-button:hover { background: var(--raised); }
+.account-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--avatar);
+  color: var(--on-avatar);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.account-chevron {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.account-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1000;
+  min-width: 230px;
+  max-width: min(320px, calc(100vw - 32px));
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.account-email {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.account-item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.account-item:hover { background: var(--raised); }
+
+@media (min-width: 576px) {
+  .app-header { padding: 0 24px; }
+  .app-nav { margin-left: 16px; }
+  .app-brand .logo-mark { width: 38px; height: 38px; }
+  .app-brand-name { font-size: 1rem; }
+  .app-header--signed-in .app-brand-name { display: inline; }
+}
+
+/* ---------- Settings page ---------- */
+.settings-wrap {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.settings-wrap h1 { font-size: 2rem; margin: 0; }
+.settings-card .card-body { min-width: 0; }
+.settings-card h2 { margin-bottom: 1rem; }
+
+/* Main button on the settings cards: faint fill with a teal outline. */
+.btn-tint {
+  --bs-btn-color: var(--text);
+  --bs-btn-bg: color-mix(in srgb, var(--text) 8%, transparent);
+  --bs-btn-border-color: var(--teal);
+  --bs-btn-hover-color: var(--text);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--text) 15%, transparent);
+  --bs-btn-hover-border-color: var(--teal-hover);
+  --bs-btn-active-color: var(--text);
+  --bs-btn-active-bg: color-mix(in srgb, var(--text) 15%, transparent);
+  --bs-btn-active-border-color: var(--teal-hover);
+  --bs-btn-disabled-color: var(--text-muted);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--line);
+}
+/* Quiet button for secondary actions (Cancel, Send a new code) and disabled ones. */
+.btn-ghost {
+  --bs-btn-color: var(--text-muted);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--line);
+  --bs-btn-hover-color: var(--text);
+  --bs-btn-hover-bg: var(--raised);
+  --bs-btn-hover-border-color: var(--line);
+  --bs-btn-disabled-color: var(--text-muted);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--line);
+}
+
+/* Bigger version of the round initials avatar used on the Profile card. */
+.avatar-lg { width: 72px; height: 72px; font-size: 1.75rem; flex: none; }
+
+/* One notification checkbox: the whole row is clickable and at least 44px tall for touch. */
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.form-check-input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+}
+.form-check-input:checked {
+  background-color: var(--teal);
+  border-color: var(--teal);
+  --bs-form-check-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%2306201f' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+}
+
+/* The "Verify your new email" form, separated from the main form by a line. */
+.pending-box {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+a.account-item { display: flex; align-items: center; text-decoration: none; }
+
+@media (max-width: 420px) {
+  .settings-wrap h1 { font-size: clamp(1.5rem, 7vw, 2rem); }
+}
+@media (min-width: 576px) {
+  .settings-wrap { padding: 32px 24px 40px; }
 }

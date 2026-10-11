@@ -3,7 +3,7 @@
 import { defineConfig } from 'vite'; // helper that gives editor autocomplete for the settings
 import react from '@vitejs/plugin-react'; // teaches Vite how to read React/JSX files
 
-// Where Lukas's FastAPI backend runs. 8000 is uvicorn's default port:  uvicorn app.main:app --reload
+// Where the FastAPI backend runs. 8000 is uvicorn's default port:  uvicorn app.main:app --reload
 // If yours differs, either edit this line or start the frontend like:  BACKEND_URL=http://localhost:9000 npm run dev
 // (on Windows PowerShell:  $env:BACKEND_URL="http://localhost:9000"; npm run dev)
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'; // BACKEND HOOK
