@@ -24,6 +24,7 @@ from sqlalchemy import (
     Numeric,
     DateTime,
     Boolean,
+    CheckConstraint,
 )
 
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
@@ -84,18 +85,48 @@ class User(Base):
 class Group(Base):
     __tablename__ = "groups"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    __table_args__ = (
+        CheckConstraint(
+            "group_type IN ('roommate', 'partner', 'family', 'outing')",
+            name="ck_groups_group_type",
+        ),
+    )
 
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    group_type = Column(String(20), nullable=False)
+    created_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
 
 class UserGroup(Base):
-    """Join table: which users belong to which groups."""
     __tablename__ = "user_groups"
 
-    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
-    group_id = Column(BigInteger, ForeignKey("groups.id"), nullable=False)
+    user_id = Column(
+        BigInteger,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
 
-    __table_args__ = (PrimaryKeyConstraint("user_id", "group_id"),)
+    group_id = Column(
+        BigInteger,
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    is_admin = Column(Boolean, nullable=False, server_default="false")
+    invite_status = Column(
+        String(20),
+        nullable=False,
+        server_default="pending",
+    )
     split_percentage = Column(Numeric(5, 2), nullable=True)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("user_id", "group_id"),
+        CheckConstraint(
+            "invite_status IN ('pending', 'accepted', 'declined')",
+            name="ck_user_groups_invite_status",
+        ),
+    )
 
 # === Things associated with one group ===
 
@@ -103,8 +134,34 @@ class Event(Base):
     __tablename__ = "events"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    group_id = Column(BigInteger, ForeignKey("groups.id"), nullable=False)
 
+    group_id = Column(
+        BigInteger,
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    name = Column(String(100), nullable=False)
+
+
+class EventMember(Base):
+    __tablename__ = "event_members"
+
+    event_id = Column(
+        BigInteger,
+        ForeignKey("events.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    user_id = Column(
+        BigInteger,
+        ForeignKey("users.id"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("event_id", "user_id"),
+    )
 
 class ItemizedExpense(Base):
     """A receipt-derived expense made up of individual line items."""
