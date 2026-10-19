@@ -1,5 +1,5 @@
-// All backend calls live in this file. Pages import the small functions at the bottom and never call
-// fetch directly, so a route change only has to be made here.
+// Backend calls for signing in, accounts and the profile. Pages import the small functions at the bottom and
+// never call fetch directly, so a route change only has to be made here.
 //
 // Every function resolves to { ok, status, data?, network? }:
 //   ok       true for a 2xx response
@@ -13,40 +13,16 @@
 //
 // Requests use the /api prefix. In development, vite.config.js strips it and forwards the call to the
 // backend, so the browser only talks to its own origin and the httpOnly session cookie is sent automatically.
+// The shared request helper lives in http.js, and the group and event calls live in groups.js.
 
-const API_PREFIX = '/api'; // must match the proxy in vite.config.js
+import { API_PREFIX, normalizeEmail, request } from './http.js';
+
 const REGISTER_PATH = `${API_PREFIX}/auth/register`;
 const LOGIN_PATH = `${API_PREFIX}/auth/login`;
 const ME_PATH = `${API_PREFIX}/auth/me`;
 const LOGOUT_PATH = `${API_PREFIX}/auth/logout`;
 const CHANGE_PASSWORD_PATH = `${API_PREFIX}/auth/change-password`;
 const PROFILE_PATH = `${API_PREFIX}/profile`;
-
-// Emails are sent trimmed and lowercase so one person cannot end up with two accounts.
-const normalizeEmail = (email) => String(email ?? '').trim().toLowerCase();
-
-// Shared request helper. `body` is optional (GET and logout send none).
-async function request(method, path, body) {
-  let res;
-  try {
-    res = await fetch(path, {
-      method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      credentials: 'include', // sends the session cookie
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch {
-    // fetch only throws when the request never completed (server down, offline, blocked).
-    return { ok: false, status: 0, network: true };
-  }
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    // Empty or non-JSON body: data stays null.
-  }
-  return { ok: res.ok, status: res.status, data };
-}
 
 // Creates an account. This does not start a session; call loginUser afterwards.
 export const registerUser = ({ email, password }) =>

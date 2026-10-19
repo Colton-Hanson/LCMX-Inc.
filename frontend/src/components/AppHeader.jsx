@@ -23,6 +23,7 @@ export default function AppHeader({ user, loading = false }) {
       {signedIn && (
         <nav className="app-nav" aria-label="Main">
           <NavLink className="app-nav-link" to="/home">Home</NavLink>
+          <NavLink className="app-nav-link" to="/groups">Groups</NavLink>
         </nav>
       )}
       {user && <AccountMenu user={user} />}

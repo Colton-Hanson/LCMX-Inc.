@@ -18,10 +18,18 @@
   --text-muted: rgba(227, 232, 236, 0.74);
 
   --ok: #75b798;
+  --ok-soft: #15301f;
   --error: #ff8a80;
+  --error-soft: #3a1d1b;
+  --warn: #f0a45c;
+  --warn-soft: #33261a;
   --focus: #ffb703;
   --avatar: #6aa5ee;
   --on-avatar: #0e1317;
+  --avatar-2: #b48af0;
+  --avatar-3: #e0b13a;
+  --avatar-4: #ee7fa6;
+  --avatar-5: #9aa6b1;
 
   --font-heading: 'Red Hat Display', 'Hanken Grotesk', system-ui, sans-serif;
   --font-body: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -357,3 +365,247 @@ a.account-item { display: flex; align-items: center; text-decoration: none; }
 @media (min-width: 576px) {
   .settings-wrap { padding: 32px 24px 40px; }
 }
+
+/* ---------- Groups and events (shared pieces) ---------- */
+/* Page area for the group pages. Forms use the narrow version. */
+.page-wrap {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.page-wrap--narrow { max-width: 760px; }
+.page-wrap h1 { margin: 0; font-size: 2rem; font-weight: 900; }
+.page-wrap h2 { margin: 0; font-size: 1.25rem; font-weight: 800; }
+@media (max-width: 420px) {
+  .page-wrap h1 { font-size: clamp(1.5rem, 7vw, 2rem); }
+}
+@media (min-width: 576px) {
+  .page-wrap { padding: 32px 24px 40px; }
+}
+
+/* Card used on the group pages. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.panel > .field { margin: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.back-link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.link-strong { font-weight: 600; }
+
+/* Button variants that go with .btn-tint and .btn-ghost. */
+.btn-s { min-height: 44px; padding: 0.25rem 1rem; }
+.btn-danger-outline {
+  --bs-btn-color: var(--error);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--error);
+  --bs-btn-hover-color: var(--error);
+  --bs-btn-hover-bg: var(--error-soft);
+  --bs-btn-hover-border-color: var(--error);
+  --bs-btn-active-color: var(--error);
+  --bs-btn-active-bg: var(--error-soft);
+  --bs-btn-active-border-color: var(--error);
+  --bs-btn-disabled-color: var(--text-muted);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--line);
+}
+.btn-row { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* Round avatars in five colors. */
+.av {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--avatar);
+  color: var(--on-avatar);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.av--lg { width: 44px; height: 44px; font-size: 1rem; }
+.av-2 { background: var(--avatar-2); }
+.av-3 { background: var(--avatar-3); }
+.av-4 { background: var(--avatar-4); }
+.av-5 { background: var(--avatar-5); }
+
+/* Small rounded label (group type, Admin, Member, Pending). */
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.pill--primary { background: var(--teal-soft); color: var(--teal-link); }
+
+/* One row in a list of groups, members or invitations. */
+.row-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+}
+.row-item:first-child { border-top: 0; padding-top: 0; }
+a.row-item:hover .row-title { color: var(--teal-link); }
+.row-grow { flex: 1 1 180px; min-width: 0; }
+.row-title { display: block; font-weight: 700; overflow-wrap: anywhere; }
+.row-sub { display: block; color: var(--text-muted); font-size: 0.875rem; }
+
+/* Cards in the Groups list. */
+.group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
+.group-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+}
+.group-card:hover { border-color: var(--teal); color: var(--text); }
+.group-card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.group-card-name { display: block; font-weight: 700; font-size: 1.125rem; overflow-wrap: anywhere; }
+
+/* Boxed messages. */
+.msg {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.msg .ic { margin-top: 2px; }
+.msg-text { min-width: 0; overflow-wrap: anywhere; }
+.msg-text p { margin: 0; }
+.msg-text p + p { margin-top: 4px; }
+.msg--ok { background: var(--ok-soft); color: var(--ok); }
+.msg--error { background: var(--error-soft); color: var(--error); }
+.msg--warn { background: var(--warn-soft); color: var(--warn); }
+.msg--info { background: var(--teal-soft); border: 1px solid var(--teal); color: var(--text); font-weight: 400; }
+.ic { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.msg:focus { outline: none; }
+.msg:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Radio choices that look like pills (group type). */
+.rad-group { display: flex; flex-wrap: wrap; gap: 10px; }
+.rad {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-weight: 600;
+  cursor: pointer;
+}
+.rad input { width: 20px; height: 20px; margin: 0; accent-color: var(--teal); }
+.rad:has(input:checked) { border-color: var(--teal); background: var(--teal-soft); box-shadow: 0 0 0 1px var(--teal); }
+.rad:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Two-way switch (All members / Pick members). */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; background: var(--raised); border: 1px solid var(--line); border-radius: 10px; }
+.seg button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+.seg button.is-on { background: var(--surface); color: var(--text); box-shadow: 0 0 0 2px var(--teal); }
+
+/* Pill-shaped choices with an avatar: toggles (event members) and the list of people being invited. */
+.chip-list { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 16px 4px 6px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+button.chip { cursor: pointer; text-align: left; }
+.chip.is-on { border-color: var(--teal); background: var(--teal-soft); box-shadow: 0 0 0 1px var(--teal); }
+.chip--static { padding-right: 4px; }
+.chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.chip-remove:hover { background: var(--raised); }
+
+/* Email box with its button beside it. */
+.invite-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.invite-row .form-control { flex: 1 1 260px; width: auto; }
+
+/* Modal dialog. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 96px 16px 16px;
+  background: rgba(10, 16, 22, 0.65);
+  overflow-y: auto;
+}
+.dlg {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+.dlg p { margin: 0; }
+
+fieldset.plain { margin: 0; padding: 0; border: 0; min-width: 0; }
+fieldset.plain > legend { float: none; width: auto; padding: 0; margin-bottom: 8px; font-size: 1rem; font-weight: 600; }

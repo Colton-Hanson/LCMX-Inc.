@@ -3,6 +3,8 @@ Sprint 1: SCRUM-11 Register, SCRUM-12 Login.
 
 Sprint 2: SCRUM-38 Settings page, SCRUM-39 Route guards, SCRUM-40 Inline validation errors, SCRUM-41 Responsive and screen-reader pass.
 
+Sprint 3: SCRUM-71 Pending invites on Home, SCRUM-68 Create group, SCRUM-70 Create event, SCRUM-69 Group settings.
+
 React + Vite. Lives in the `frontend/` folder. For the database and backend setup, follow the main README.
 
 ## Quick start
@@ -29,17 +31,22 @@ Windows PowerShell blocking `npm`? Use `npm.cmd` instead, or run this once in th
 |---|---|---|
 | `/register` | `RegisterPage.jsx` (SCRUM-11) | Email and password checks, then logs the user in and goes to `/home` |
 | `/login` | `LoginPage.jsx` (SCRUM-12) | One generic message for a wrong email or password |
-| `/home` | `HomePage.jsx` | Temporary page under the signed-in top bar, to be replaced by the real dashboard |
+| `/home` | `HomePage.jsx` (SCRUM-71) | Greeting, "Your groups", and "Pending invites" with Accept and Decline. An accepted group appears right away, no refresh. |
+| `/groups` | `GroupsPage.jsx` | Cards for the groups on this device, and a Create group button |
+| `/groups/new` | `CreateGroupPage.jsx` (SCRUM-68) | Group name, type, and people to invite by email. Cancel saves nothing. Success opens the group page. |
+| `/groups/:groupId` | `GroupPage.jsx` | The group's name, type and members, with links to New event and Group settings |
+| `/groups/:groupId/events/new` | `CreateEventPage.jsx` (SCRUM-70) | Event name, then All members or Pick members. Create event stays off while nobody is selected. |
+| `/groups/:groupId/settings` | `GroupSettingsPage.jsx` (SCRUM-69) | Member list with Admin, Member and Pending, add a member, remove with a balance warning. Make admin is turned off for now. |
 | `/settings` | `SettingsPage.jsx` (SCRUM-38, SCRUM-40) | Three cards: Profile, Password and Notifications. Errors show under the field they belong to. |
 | | Profile card | Name and email. Changing the email asks for a verification code first. |
 | | Password card | Hidden until "Change password" is pressed. A change logs the user out everywhere, so they log in again. |
 | | Notifications card | Four checkboxes for which notifications to get |
 | anything else | — | Redirects to `/login` |
 
-**Route guard (SCRUM-39).** `RequireAuth.jsx` is a wrapper that protects the pages inside it (`/home` and `/settings`). When one of them opens, it checks with the backend that the user has a valid session, and only then shows the page along with the signed-in top bar and the user's profile.
+**Route guard (SCRUM-39).** `RequireAuth.jsx` is a wrapper that protects the pages inside it (every page except `/login` and `/register`). When one of them opens, it checks with the backend that the user has a valid session, and only then shows the page along with the signed-in top bar and the user's profile.
 - Guests get redirected to `/login` with a "Log in to continue." message.
 - If a session expires while a page is open, the user is sent to `/login` with "Your session ended. Log in to continue." This happens on the next request the server rejects with a 401, or when they switch back to the browser tab.
-- Adding a page that needs a login later? In `App.jsx`, list it with the other protected pages (the group that already holds `/home` and `/settings`). It gets the login check automatically.
+- Adding a page that needs a login later? In `App.jsx`, list it with the other protected pages (the group that already holds `/home`, `/settings` and the group pages). It gets the login check automatically.
 
 ## Files
 | File | What it does |
@@ -47,18 +54,26 @@ Windows PowerShell blocking `npm`? Use `npm.cmd` instead, or run this once in th
 | `index.html` | The one HTML page. React draws the app into it. |
 | `src/main.jsx` | Starts the app and loads the fonts, Bootstrap and `styles.css` |
 | `src/App.jsx` | Which page shows at which URL, and which pages need a login |
-| `src/pages/` | The four pages: Register, Login, Home, Settings |
-| `src/components/AppHeader.jsx` | The top bar: logo, app name, and when signed in, the Home link and account menu |
+| `src/pages/` | The pages in the table above |
+| `src/components/AppHeader.jsx` | The top bar: logo, app name, and when signed in, the Home and Groups links and the account menu |
 | `src/components/RequireAuth.jsx` | The route guard described above |
-| `src/components/` (others) | Logo, text box, email box, password box, and the checklist that shows the password rules as you type |
+| `src/components/` (others) | Logo, text box, email box, password box, the password rules checklist, and for groups: the avatar, boxed messages, the invite-by-email row and the pop-up dialog |
+| `src/lib/groupCache.js` | The backend has no "list my groups" route yet, so this remembers the groups the user created or joined on this device. Delete it when that route exists. |
+| `src/lib/eventCache.js` | The backend has no "list events" route yet, so this remembers the events the user created in each group on this device and the group page lists them. Delete it when that route exists. |
+| `src/lib/groupHooks.js` | Loads a group's members and finds a group's name for the pages |
+| `src/lib/groupTypes.js` | The four group types (roommate, partner, outing, family) and their labels |
 | `src/lib/validators.js` | Where the rules for emails, passwords and names are defined. The forms and the password checklist both use them. |
 | `src/lib/apiErrors.js` | Turns a failed backend reply into a message for the user |
 | `src/lib/initials.js` | The letters shown in the round profile circle |
 | `src/lib/usePageTitle.js` | Sets the browser tab title for each page |
-| `src/api/auth.js` | **The only file that talks to the backend.** Every request lives here as a small function (like `loginUser`), and the pages just call those functions. If a backend route changes, this is the one file to update. |
+| `src/api/http.js` | The one place that calls `fetch`. It sends the cookie and turns every reply into `{ok, status, data}`. |
+| `src/api/auth.js` | Sign-in, account and profile requests as small functions (like `loginUser`). Pages call these functions and never `fetch` directly. |
+| `src/api/groups.js` | Group, invitation, member and event requests, the same way. If a backend route changes, update the matching file in `src/api/`. |
 | `src/styles.css` | Our CSS (dark teal theme). Everything else comes from Bootstrap. |
 | `vite.config.js` | Dev-server settings, including the `/api` forwarding |
-| `tests/` | Automated tests for the forms, pages, route guard, validators and `auth.js` |
+| `tests/` | Automated tests for the forms, pages, route guard, validators, `auth.js`, `groups.js` and the group screens |
+
+**Temporary workaround for the missing list routes.** Every piece of code that exists only because the backend has no `GET /groups` and no list-events route is marked with the tag `WORKAROUND(no list routes)` (search the project for it) and explained in the comment banners at the top of `lib/groupCache.js` and `lib/eventCache.js`, including how to remove it. Limit: those lists live in one browser, so a new computer or cleared site data starts empty.
 
 ## Backend routes this frontend uses
 | Call | Route | Success | Failures the UI handles |
@@ -72,6 +87,14 @@ Windows PowerShell blocking `npm`? Use `npm.cmd` instead, or run this once in th
 | `requestEmailChange` | `POST /profile/email-change` `{new_email}` | 200 `{message, verification_token}` | 400 same email, 409 already in use, 422 not an email |
 | `confirmEmailChange` | `POST /profile/email-change/confirm` `{token}` | 200 | 400 wrong or expired code, 409 |
 | `changePassword` | `POST /auth/change-password` `{current_password, new_password}` | 200 (all sessions end) | 400 wrong current password, 422 weak new password |
+| `createGroup` | `POST /groups` `{name, group_type}` | 201 group | 422 blank name or bad type, 401 |
+| `inviteMember` | `POST /groups/{id}/invitations` `{email}` | 201 `status: pending`, or `registration_required` (nothing sent) | 409 already invited or a member, 403 not a member, 404 |
+| `getPendingInvitations` | `GET /groups/invitations/pending` | 200 `[{group_id, group_name, group_type}]` | 401 |
+| `acceptInvitation`, `declineInvitation` | `POST /groups/{id}/invitations/accept` and `/decline` | 200 | 404 invitation already gone |
+| `getMembers` | `GET /groups/{id}/members` | 200 `[{user_id, email, is_admin}]` (accepted members only) | 403 or 404 not a member |
+| `removeMember` | `DELETE /groups/{id}/members/{userId}` (`?confirm=true` after the warning) | 200 | 409 balance warning (asks to confirm) or only admin, 403 not an admin |
+| `createEvent` | `POST /events` `{name, group_id, member_ids}` | 201 event | 422 nobody picked or someone outside the group, 403 |
+| `reassignAdmin` | none yet | placeholder | the backend has no route, so Make admin is turned off |
 
 ---
 Formatted with AI, all information is original and did not change.
