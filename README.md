@@ -79,15 +79,26 @@ A note on `db_starter/`: that folder is Mick's schema notes and early migration 
 
 **How to actually use the thing**, as it stands today. This is the part a grader or a demo audience sees, so it's worth knowing cold, and worth being honest about what's real versus planned.
 
-**Built and working in the browser:** register with an email and a password (eight characters, one capital letter, one symbol, typed twice), log in, land on a temporary home page that confirms you're logged in, change settings, and log out. Any unknown URL redirects to /login, and /home does the same when there is no valid session.
+**Built and working in the browser:** register with an email and a password (eight characters, one capital letter, one symbol, typed twice), log in, change settings, and log out. Home lists your groups and your pending invites. From there you can create a group, invite people, accept or decline an invite, open a group, create an event, and remove a member from Group settings. Any unknown URL redirects to /login, and the signed-in pages do the same when there is no valid session.
 
-**Built and working in the API:** groups, invitations, membership removal, and events. There is no groups or events page in the React app yet. Use the walkthrough below.
+**Built and working in the API:** the same group, invitation, membership, and event actions. The curl section below is that path. The browser lists of groups and events are remembered on this device until the backend has list routes. A cleared browser, or a different computer, starts those lists empty. Membership and invitations still come from the server.
 
 **Planned, not built yet:** manual and receipt-based expense entry, splits and balances, budgets, and the analysis page. The product vision in the opening paragraph above describes where this is headed, not what's demoable right now. Update this section as each piece actually lands, don't let the walkthrough get ahead of the code again.
 
 ---
 
-**Groups and events.** The server has to be the one you started above (`http://localhost:8000`). The same endpoints are listed at `http://localhost:8000/docs`. The steps below use `curl` because two people need two session cookies, and one browser tab only keeps one.
+**Groups and events, in the browser.** Both servers from the setup above have to be running. Open `http://localhost:5173`, register or log in, and use two accounts if you want to see an invite answered by someone else. A second browser profile, or a private window, keeps the second login.
+
+1. Home shows a greeting, **Your groups**, and **Pending invites**. Accept or Decline updates the lists on that page without a refresh.
+2. **Groups** (`/groups`) shows the groups saved on this device and a Create group button.
+3. Create group (`/groups/new`): enter a name, pick `roommate`, `partner`, `family`, or `outing`, and invite people by email. Cancel saves nothing. Success opens the group page. You are the accepted administrator.
+4. An invite to an email with no account is reported as registration required, and no membership is created. An email that already belongs to the group is refused.
+5. The invited person logs in, sees the invite on Home, and accepts or declines it. Only they can answer, and only while it is pending. An accepted group shows up under Your groups on that device.
+6. The group page (`/groups/:groupId`) shows the name, type, and accepted members, plus New event and Group settings.
+7. New event (`/groups/:groupId/events/new`): enter a name, then choose All members or pick people. Create event stays off until at least one member is selected. An empty member list is rejected. The new event is listed on the group page from this browser's cache.
+8. Group settings (`/groups/:groupId/settings`): accepted members are Admin or Member, and pending invites are listed too. Add a member by email. Remove is for administrators. A member whose balance is zero is removed immediately. The group's only administrator cannot be removed. A nonzero balance is supposed to warn and wait for confirmation, but `get_member_balance()` still returns `0.0` because expenses are not built, so that warning does not appear against the live server. The backend tests `test_balance_requires_confirmation` and `test_balance_removal_with_confirmation` cover it with a stubbed $25 balance. Handing the admin role to someone else is not available yet.
+
+**The same flow over the API.** The server is `http://localhost:8000`. The same endpoints are listed at `http://localhost:8000/docs`. These steps use `curl` because two people need two session cookies, and one browser tab only keeps one.
 
 Login stores an `access_token` cookie. Register does not log you in. Passwords need eight characters, one capital letter, and one symbol. Group type is one of `roommate`, `partner`, `family`, or `outing`.
 
