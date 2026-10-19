@@ -16,6 +16,8 @@ cd [repo-name]
 docker compose up -d
 ```
 
+**No Docker.** `backend/scripts/dev-postgres.sh start` runs Postgres from your home directory instead. It listens on `127.0.0.1:5432` with user `postgres`, password `postgres`, and database `shared_expense_dev`. The files stay in `~/.local/share/lcmx-postgres`. `backend/scripts/dev-postgres.sh stop` shuts it down, and the same `start` command brings it back after a reboot. The first start needs `embedded-postgres` installed in the backend virtualenv (`pip install embedded-postgres`), which copies the server binaries into that home directory.
+
 Backend:
 
 ```bash
