@@ -187,6 +187,7 @@ def test_regular_member_can_create_event(event_setup):
     assert response.status_code == 201
 
 
+# Required case: an event with zero members is rejected.
 def test_empty_participants_rejected(event_setup):
     response = create_event(event_setup, [])
 

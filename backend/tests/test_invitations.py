@@ -98,6 +98,7 @@ def send_invitation(setup):
     )
 
 
+# Required case: invite a registered user. Membership stays pending until they respond.
 def test_invitation_created(invitation_setup):
     response = send_invitation(invitation_setup)
 
@@ -122,6 +123,7 @@ def test_duplicate_invitation_returns_409(invitation_setup):
     assert send_invitation(invitation_setup).status_code == 409
 
 
+# Required case: the invitee accepts their own pending invitation.
 def test_accept_invitation(invitation_setup):
     send_invitation(invitation_setup)
 
@@ -144,6 +146,7 @@ def test_accept_invitation(invitation_setup):
         assert membership.invite_status == "accepted"
 
 
+# Required case: the invitee declines their own pending invitation.
 def test_decline_invitation(invitation_setup):
     send_invitation(invitation_setup)
 

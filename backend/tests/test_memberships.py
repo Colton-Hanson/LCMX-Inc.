@@ -152,6 +152,7 @@ def test_outsider_cannot_list_members(membership_setup):
     assert response.status_code == 403
 
 
+# Removal case 1: a zero balance is removed immediately, and the user account stays.
 def test_admin_can_remove_member(membership_setup):
     setup = membership_setup
     member_id = setup["user_ids"]["member"]
@@ -195,6 +196,7 @@ def test_outsider_cannot_remove(membership_setup):
     assert response.status_code == 403
 
 
+# Removal case 3: the group's only administrator cannot be removed.
 def test_sole_admin_cannot_remove_self(membership_setup):
     setup = membership_setup
     admin_id = setup["user_ids"]["admin"]
@@ -224,6 +226,7 @@ def test_missing_member_returns_404(membership_setup):
     assert response.status_code == 404
 
 
+# Removal case 2: a nonzero balance is blocked until the caller confirms.
 def test_balance_requires_confirmation(
     membership_setup,
     monkeypatch,
@@ -253,6 +256,7 @@ def test_balance_requires_confirmation(
         ) is not None
 
 
+# Removal case 2, confirmed: ?confirm=true removes a member who still owes money.
 def test_balance_removal_with_confirmation(
     membership_setup,
     monkeypatch,

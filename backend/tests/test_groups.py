@@ -61,6 +61,7 @@ def authenticated_user(client):
         db.commit()
 
 
+# Required case: create a group. The creator becomes an accepted administrator.
 def test_create_group_success(client, authenticated_user):
     response = client.post(
         "/groups",
