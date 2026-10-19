@@ -7,8 +7,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import App from '../src/App.jsx';
 import * as api from '../src/api/auth.js';
+import * as groupsApi from '../src/api/groups.js';
 
 vi.mock('../src/api/auth.js');
+vi.mock('../src/api/groups.js');
 
 function renderAt(path) {
   return render(
@@ -22,16 +24,20 @@ const profile = { id: 1, name: 'Cole Hanson', email: 'cole@umkc.edu', pending_em
 const signedIn = { ok: true, status: 200, data: profile };
 const guest = { ok: false, status: 401, data: { detail: 'Authentication required.' } };
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  localStorage.clear();
+  groupsApi.getPendingInvitations.mockResolvedValue({ ok: true, status: 200, data: [] });
+});
 
 describe('Route guard', () => {
-  it.each(['/home', '/settings'])('sends a guest who opens %s to the login page with a message', async (path) => {
+  it.each(['/home', '/settings', '/groups', '/groups/new', '/groups/3', '/groups/3/settings', '/groups/3/events/new'])('sends a guest who opens %s to the login page with a message', async (path) => {
     api.getProfile.mockResolvedValue(guest);
     renderAt(path);
     expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument();
     expect(screen.getByText('Log in to continue.')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Settings' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Home Page' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ })).toBeNull();
   });
 
   it('never shows the protected page while the session check is running', () => {
@@ -47,14 +53,14 @@ describe('Route guard', () => {
     renderAt('/settings');
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'Home' }));
-    expect(await screen.findByRole('heading', { name: 'Home Page' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ })).toBeInTheDocument();
     expect(api.getProfile).toHaveBeenCalledTimes(1);
   });
 
   it('sends the user to login when the session has ended by the time they return to the tab', async () => {
     api.getProfile.mockResolvedValueOnce(signedIn).mockResolvedValue(guest);
     renderAt('/home');
-    await screen.findByRole('heading', { name: 'Home Page' });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ });
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
@@ -65,12 +71,12 @@ describe('Route guard', () => {
   it('keeps the user on the page if the recheck cannot reach the server', async () => {
     api.getProfile.mockResolvedValueOnce(signedIn).mockResolvedValue({ ok: false, status: 0, network: true });
     renderAt('/home');
-    await screen.findByRole('heading', { name: 'Home Page' });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ });
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
     await waitFor(() => expect(api.getProfile).toHaveBeenCalledTimes(2));
-    expect(screen.getByRole('heading', { name: 'Home Page' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ })).toBeInTheDocument();
   });
 
   it('sends unknown addresses to the login page', async () => {
