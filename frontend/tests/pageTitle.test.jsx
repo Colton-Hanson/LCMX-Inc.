@@ -6,8 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import App from '../src/App.jsx';
 import * as api from '../src/api/auth.js';
+import * as groupsApi from '../src/api/groups.js';
 
 vi.mock('../src/api/auth.js');
+vi.mock('../src/api/groups.js');
 
 const profile = { id: 1, name: 'Cole Hanson', email: 'cole@umkc.edu', pending_email: null };
 
@@ -19,7 +21,12 @@ function renderAt(path) {
   );
 }
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  localStorage.clear();
+  groupsApi.getPendingInvitations.mockResolvedValue({ ok: true, status: 200, data: [] });
+  groupsApi.getMembers.mockResolvedValue({ ok: true, status: 200, data: [{ user_id: 1, email: 'cole@umkc.edu', is_admin: true }] });
+});
 
 describe('Page titles', () => {
   it.each([
@@ -27,6 +34,11 @@ describe('Page titles', () => {
     ['/register', 'Create your account', false],
     ['/home', 'Home', true],
     ['/settings', 'Settings', true],
+    ['/groups', 'Groups', true],
+    ['/groups/new', 'Create group', true],
+    ['/groups/3', 'Group', true],
+    ['/groups/3/settings', 'Group settings', true],
+    ['/groups/3/events/new', 'New event', true],
   ])('%s sets the tab title', async (path, title, signedIn) => {
     api.getProfile.mockResolvedValue(
       signedIn ? { ok: true, status: 200, data: profile } : { ok: false, status: 401, data: {} }

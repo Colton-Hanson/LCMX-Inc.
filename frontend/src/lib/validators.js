@@ -64,3 +64,25 @@ export function validateName(name) {
   if (Array.from(value).length > NAME_MAX_LENGTH) return `Name must be ${NAME_MAX_LENGTH} characters or fewer.`;
   return '';
 }
+
+// A group or event name must not be blank and must fit the server's 100-character limit.
+export const GROUP_NAME_MAX_LENGTH = 100;
+export function validateGroupName(name) {
+  const value = (name ?? '').trim();
+  if (!value) return 'Enter a group name.';
+  if (Array.from(value).length > GROUP_NAME_MAX_LENGTH) return `Group name must be ${GROUP_NAME_MAX_LENGTH} characters or fewer.`;
+  return '';
+}
+export function validateEventName(name) {
+  const value = (name ?? '').trim();
+  if (!value) return 'Enter an event name.';
+  if (Array.from(value).length > GROUP_NAME_MAX_LENGTH) return `Event name must be ${GROUP_NAME_MAX_LENGTH} characters or fewer.`;
+  return '';
+}
+
+// Email check for the "invite by email" boxes (the wording differs from the login forms).
+export function validateInviteEmail(email) {
+  const value = (email ?? '').trim();
+  if (!value) return 'Enter an email address to invite.';
+  return EMAIL_RE.test(value) ? '' : EMAIL_FORMAT_MESSAGE;
+}
