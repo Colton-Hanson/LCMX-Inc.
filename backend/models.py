@@ -142,6 +142,15 @@ class Event(Base):
     )
 
     name = Column(String(100), nullable=False)
+    paid = Column(Boolean, server_default = 'false')
+    category = Column(String(20), nullable = True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "category IN ('food', 'rent', 'entertainment', 'other')",
+            name="ck_events_category",
+        ),
+    )
 
 
 class EventMember(Base):
@@ -176,8 +185,17 @@ class Expense(Base):
     __tablename__ = "expenses"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    group_id = Column(BigInteger, ForeignKey("groups.id"), nullable=False)
+    group_id = Column(BigInteger, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable = True)
+    paid = Column(Boolean, server_default = 'false')
+    category = Column(String(20), nullable = True)
 
+    __table_args__ = (
+        CheckConstraint(
+            "category IN ('food', 'rent', 'entertainment', 'other')",
+            name="ck_expenses_category",
+        ),
+    )
 
 class Budget(Base):
     __tablename__ = "budgets"
@@ -206,7 +224,7 @@ class Split(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
-    # NOTE: no amount/portion column yet — flagged above.
+    amount = Column(Numeric(10, 2), nullable=True)
 
 
 class ExpenseSplit(Base):
@@ -264,9 +282,15 @@ class Balance(Base):
 
     user_1_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     user_2_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
-    # NOTE: no amount column yet — flagged above.
+    indebted_party = Column(BigInteger, ForeignKey("users.id"), nullable=True) # Null means no one owes anyone
+    debt = Column(Numeric(10, 2), nullable=False)
 
-    __table_args__ = (PrimaryKeyConstraint("user_1_id", "user_2_id"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("user_1_id", "user_2_id"),
+        CheckConstraint("owed_party IN (user_1_id, user_2_id)", name="ck_balances_owed_party"),
+        CheckConstraint("debt >= 0", name="ck_balances_debt_nonneg"),
+        CheckConstraint("user_1_id < user_2_id", name="ck_balances_user_order"),
+    )
 
 class UserSession(Base):
     __tablename__ = "sessions"
