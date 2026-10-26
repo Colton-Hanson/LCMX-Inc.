@@ -50,7 +50,8 @@ def test_create_expense_invalid_request():
         app.dependency_overrides.pop(get_current_user, None)
 
 
-def test_create_expense_not_implemented():
+def test_create_expense_success():
+    from unittest.mock import patch
     from app.api.dependencies import get_current_user
 
     app.dependency_overrides[get_current_user] = lambda: type(
@@ -58,13 +59,31 @@ def test_create_expense_not_implemented():
     )()
 
     try:
-        with patch(
-            "app.api.routes.expenses.validate_expense",
-            return_value={
-                "shares": {1: 30, 2: 30},
-                "rounding_adjusted_member_ids": [],
-            },
+        with (
+            patch(
+                "app.api.routes.expenses.validate_expense",
+                return_value={
+                    "shares": {1: 30, 2: 30},
+                    "rounding_adjusted_member_ids": [],
+                },
+            ),
+            patch(
+                "app.api.routes.expenses.create_expense_transaction"
+            ) as mock_create,
         ):
+            mock_create.return_value = type(
+                "Expense",
+                (),
+                {
+                    "id": 1,
+                    "group_id": 1,
+                    "name": "Groceries",
+                    "amount": "60.00",
+                    "paid_by": 1,
+                    "created_at": None,
+                },
+            )()
+
             response = client.post(
                 "/expenses",
                 json={
@@ -76,7 +95,14 @@ def test_create_expense_not_implemented():
                 },
             )
 
-        assert response.status_code == 501
-        assert "not implemented" in response.json()["detail"].lower()
+        assert response.status_code == 201
+        assert response.json()["id"] == 1
+        assert response.json()["description"] == "Groceries"
+        assert response.json()["amount"] == "60.00"
+        assert response.json()["shares"] == {"1": "30", "2": "30"}
+        mock_create.assert_called_once()
+
     finally:
-        app.dependency_overrides.pop(get_current_user, None)
+        app.dependency_overrides.clear()
+
+        
