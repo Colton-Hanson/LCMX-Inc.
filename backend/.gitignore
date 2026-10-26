@@ -6,3 +6,10 @@ __pycache__/
 *.cookies
 .DS_Store
 uploads/
+
+# Local sprint documentation
+backend/SPRINT2_BACKEND_IMPLEMENTATION.md
+backend/SPRINT2_BACKEND_TEAM_HANDOFF.md
+backend/SPRINT3_SUMMARY.md
+backend/SPRINT3_TEAM_HANDOFF.md
+
