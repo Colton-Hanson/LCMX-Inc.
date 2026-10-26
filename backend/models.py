@@ -87,7 +87,7 @@ class Group(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "group_type IN ('roommate', 'partner', 'family', 'outing')",
+            "group_type IN ('roommates', 'partners', 'family', 'outing')",
             name="ck_groups_group_type",
         ),
     )
