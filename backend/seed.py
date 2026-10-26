@@ -97,7 +97,7 @@ def seed_database():
         # Groups.
         apartment = Group(
             name="Apartment 4B",
-            group_type="roommate",
+            group_type="roommates",
             created_by=alice.id,
         )
 
@@ -176,7 +176,6 @@ def seed_database():
 
         db.add_all([
             EventMember(event_id=cabin.id, user_id=bob.id),
-            EventMember(event_id=cabin.id, user_id=alice.id),
             EventMember(event_id=cabin.id, user_id=carol.id),
         ])
 
