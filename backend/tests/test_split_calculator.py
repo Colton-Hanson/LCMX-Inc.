@@ -1,4 +1,3 @@
-
 from decimal import Decimal
 
 import pytest
@@ -10,6 +9,7 @@ from app.services.split_calculator import (
 
 
 def test_even_split_with_remainder():
+    # Ten dollars across three people leaves one cent. The first person gets it.
     result = calculate_splits("10.00", [1, 2, 3])
 
     assert result["shares"] == {
@@ -18,9 +18,11 @@ def test_even_split_with_remainder():
         3: Decimal("3.33"),
     }
     assert result["rounding_adjusted_member_ids"] == [1]
+    assert sum(result["shares"].values()) == Decimal("10.00")
 
 
 def test_even_split_without_remainder():
+    # An even total needs no rounding adjustment.
     result = calculate_splits("12.00", [1, 2, 3])
 
     assert list(result["shares"].values()) == [
@@ -32,6 +34,7 @@ def test_even_split_without_remainder():
 
 
 def test_custom_split():
+    # Custom amounts are kept as entered when they already add up.
     result = calculate_splits(
         "100.00",
         [1, 2, 3],
@@ -43,7 +46,19 @@ def test_custom_split():
     assert sum(result["shares"].values()) == Decimal("100.00")
 
 
+def test_custom_amounts_must_match_the_total():
+    # Custom shares that do not add up to the expense are rejected.
+    with pytest.raises(SplitCalculationError):
+        calculate_splits(
+            "10.00",
+            [1, 2],
+            method="custom",
+            values={1: "3.00", 2: "3.00"},
+        )
+
+
 def test_percentage_split():
+    # Percentage shares are the total times each person's percent.
     result = calculate_splits(
         "100.00",
         [1, 2, 3],
@@ -59,6 +74,7 @@ def test_percentage_split():
 
 
 def test_percentage_rounding():
+    # Rounding down can leave leftover cents. Those cents go back on the total.
     result = calculate_splits(
         "10.00",
         [1, 2, 3],
@@ -68,6 +84,17 @@ def test_percentage_rounding():
 
     assert sum(result["shares"].values()) == Decimal("10.00")
     assert result["rounding_adjusted_member_ids"]
+
+
+def test_percentages_must_total_100():
+    # Percentages that do not add up to 100 are rejected.
+    with pytest.raises(SplitCalculationError):
+        calculate_splits(
+            "10.00",
+            [1, 2],
+            method="percentage",
+            values={1: "40", 2: "50"},
+        )
 
 
 @pytest.mark.parametrize(
@@ -86,11 +113,13 @@ def test_percentage_rounding():
     ],
 )
 def test_invalid_splits(total, member_ids, method, values):
+    # Each of these inputs is refused before a share list is returned.
     with pytest.raises(SplitCalculationError):
         calculate_splits(total, member_ids, method, values)
 
 
 def test_one_cent_split_between_three_members():
+    # A single cent cannot be split, so the first person is charged all of it.
     result = calculate_splits("0.01", [1, 2, 3])
 
     assert result["shares"] == {

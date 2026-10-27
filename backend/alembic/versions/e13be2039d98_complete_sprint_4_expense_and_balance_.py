@@ -2,7 +2,7 @@
 """Complete Sprint 4 expense and balance schema.
 
 Revision ID: e13be2039d98
-Revises: 904c58c16b43
+Revises: 6e590a5f2830
 """
 
 from alembic import op
@@ -10,7 +10,8 @@ import sqlalchemy as sa
 
 
 revision = "e13be2039d98"
-down_revision = "904c58c16b43"
+# Sprint 5 already revised 904c58c16b43, so this follows that revision.
+down_revision = "6e590a5f2830"
 branch_labels = None
 depends_on = None
 
