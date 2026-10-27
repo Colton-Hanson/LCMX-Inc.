@@ -181,16 +181,24 @@ class ItemizedExpense(Base):
 
 
 class Expense(Base):
-    """A manually-entered flat expense (no line items)."""
+    """A manually-entered expense shared by group members."""
     __tablename__ = "expenses"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    group_id = Column(BigInteger, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(100), nullable = True)
-    paid = Column(Boolean, server_default = 'false')
-    category = Column(String(20), nullable = True)
+    group_id = Column(
+        BigInteger,
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = Column(String(100), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+    paid_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    paid = Column(Boolean, server_default="false", nullable=False)
+    category = Column(String(20), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_expenses_amount_positive"),
         CheckConstraint(
             "category IN ('food', 'rent', 'entertainment', 'other')",
             name="ck_expenses_category",
@@ -280,16 +288,29 @@ class BudgetItem(Base):
 class Balance(Base):
     __tablename__ = "balances"
 
+    group_id = Column(
+        BigInteger,
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     user_1_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     user_2_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
-    indebted_party = Column(BigInteger, ForeignKey("users.id"), nullable=True) # Null means no one owes anyone
-    debt = Column(Numeric(10, 2), nullable=False)
+    indebted_party = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+    debt = Column(Numeric(10, 2), nullable=False, default=0)
 
     __table_args__ = (
-        PrimaryKeyConstraint("user_1_id", "user_2_id"),
-        CheckConstraint("owed_party IN (user_1_id, user_2_id)", name="ck_balances_owed_party"),
+        PrimaryKeyConstraint("group_id", "user_1_id", "user_2_id"),
+        CheckConstraint(
+            "indebted_party IS NULL OR indebted_party IN (user_1_id, user_2_id)",
+            name="ck_balances_indebted_party",
+        ),
         CheckConstraint("debt >= 0", name="ck_balances_debt_nonneg"),
         CheckConstraint("user_1_id < user_2_id", name="ck_balances_user_order"),
+        CheckConstraint(
+            "(debt = 0 AND indebted_party IS NULL) OR "
+            "(debt > 0 AND indebted_party IS NOT NULL)",
+            name="ck_balances_debt_direction",
+        ),
     )
 
 class UserSession(Base):

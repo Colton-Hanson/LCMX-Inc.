@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
 import Message from '../components/Message.jsx';
+import RecentExpenses from '../components/RecentExpenses.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
 import { getKnownEvents } from '../lib/eventCache.js';
 import { parseGroupId, useGroupMembers, useKnownGroup } from '../lib/groupHooks.js';
@@ -68,7 +69,8 @@ function GroupDetails({ groupId }) {
               </p>
             </div>
           </div>
-          <div className="btn-row">
+          <div className="btn-row group-actions">
+            <Link className="btn btn-tint" to={`/groups/${groupId}/expenses/new`} state={{ group }}>Add expense</Link>
             <Link className="btn btn-ghost" to={`/groups/${groupId}/events/new`} state={{ group }}>New event</Link>
             <Link className="btn btn-ghost" to={`/groups/${groupId}/settings`} state={{ group }}>Group settings</Link>
           </div>
@@ -80,31 +82,36 @@ function GroupDetails({ groupId }) {
       ))}
 
       <div className="d-flex flex-wrap gap-4 align-items-start">
-        <section className="panel" aria-labelledby="events-title" style={{ flex: '1 1 320px', minWidth: 0 }}>
-          <div className="panel-head">
-            <h2 id="events-title">Events</h2>
-            <Link className="btn btn-ghost btn-s" to={`/groups/${groupId}/events/new`} state={{ group }}>New event</Link>
-          </div>
-          <p className="text-body-secondary mb-0">
-            An event is a smaller circle inside the group, for expenses only some members share.
-          </p>
-          {/* WORKAROUND(no list routes): the events list below is fed by this browser's saved events (lib/eventCache.js). */}
-          {events.length > 0 && (
-            <ul className="list-unstyled m-0 mt-3">
-              {events.map((ev) => (
-                <li key={ev.id} className="row-item">
-                  <Avatar text={ev.name} />
-                  <span className="row-grow">
-                    <span className="row-title">{ev.name}</span>
-                    <span className="d-block text-body-secondary small">
-                      {ev.all ? 'All members' : `${ev.count} ${ev.count === 1 ? 'member' : 'members'}`}
+        {/* Left column: the group's expenses, then its events. */}
+        <div className="d-flex flex-column gap-4" style={{ flex: '1 1 480px', minWidth: 0 }}>
+          <RecentExpenses groupId={groupId} group={group} members={members} membersReady={status === 'ready'} />
+
+          <section className="panel" aria-labelledby="events-title">
+            <div className="panel-head">
+              <h2 id="events-title">Events</h2>
+              <Link className="btn btn-ghost btn-s" to={`/groups/${groupId}/events/new`} state={{ group }}>New event</Link>
+            </div>
+            <p className="text-body-secondary mb-0">
+              An event is a smaller circle inside the group, for expenses only some members share.
+            </p>
+            {/* WORKAROUND(no list routes): the events list below is fed by this browser's saved events (lib/eventCache.js). */}
+            {events.length > 0 && (
+              <ul className="list-unstyled m-0 mt-3">
+                {events.map((ev) => (
+                  <li key={ev.id} className="row-item">
+                    <Avatar text={ev.name} />
+                    <span className="row-grow">
+                      <span className="row-title">{ev.name}</span>
+                      <span className="d-block text-body-secondary small">
+                        {ev.all ? 'All members' : `${ev.count} ${ev.count === 1 ? 'member' : 'members'}`}
+                      </span>
                     </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
 
         <section className="panel" aria-labelledby="members-title" style={{ flex: '1 1 320px', minWidth: 0 }}>
           <h2 id="members-title">Members</h2>

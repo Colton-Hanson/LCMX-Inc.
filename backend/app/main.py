@@ -8,6 +8,7 @@ from app.api.routes.groups import router as groups_router
 from app.api.routes.invitations import router as invitations_router
 from app.api.routes.memberships import router as memberships_router
 from app.api.routes.events import router as events_router
+from app.api.routes import expenses
 
 
 app = FastAPI(
@@ -15,6 +16,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.include_router(expenses.router)
 app.include_router(health_router)
 app.include_router(users_router)
 app.include_router(auth_router)

@@ -465,13 +465,18 @@ a.account-item { display: flex; align-items: center; text-decoration: none; }
   text-decoration: none;
 }
 .row-item:first-child { border-top: 0; padding-top: 0; }
+/* Rows that are each wrapped in their own <li> get a line between them. */
+.row-list > li + li > .row-item { border-top: 1px solid var(--line); padding-top: 14px; }
+.row-list > li:last-child > .row-item { padding-bottom: 0; }
 a.row-item:hover .row-title { color: var(--teal-link); }
 .row-grow { flex: 1 1 180px; min-width: 0; }
 .row-title { display: block; font-weight: 700; overflow-wrap: anywhere; }
 .row-sub { display: block; color: var(--text-muted); font-size: 0.875rem; }
 
 /* Cards in the Groups list. */
-.group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
+.group-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
+@media (max-width: 767.98px) { .group-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) { .group-grid { grid-template-columns: 1fr; } }
 .group-card {
   display: flex;
   flex-direction: column;
