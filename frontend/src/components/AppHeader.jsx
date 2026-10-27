@@ -1,14 +1,16 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
+import Icon from './Icons.jsx';
 import Logo from './Logo.jsx';
 import { logoutUser } from '../api/auth.js';
 import { initialsFor } from '../lib/initials.js';
+import '../topbar.css';
 
 const APP_NAME = 'Shared Expense Management Tool';
 
 // The bar across the top of every page.
 //   no props  -> logged out version: just the logo and the app name
-//   user      -> signed in version ({ email, name }): adds the Home link and the account menu
+//   user      -> signed in version ({ email, name }): adds the nav links, the Add expense button and the account menu
 //   loading   -> used while a signed-in page is still loading. It already has the signed-in layout,
 //                so the bar doesn't jump around when the user's info arrives.
 export default function AppHeader({ user, loading = false }) {
@@ -24,7 +26,15 @@ export default function AppHeader({ user, loading = false }) {
         <nav className="app-nav" aria-label="Main">
           <NavLink className="app-nav-link" to="/home">Home</NavLink>
           <NavLink className="app-nav-link" to="/groups">Groups</NavLink>
+          <NavLink className="app-nav-link" to="/balances">Balances</NavLink>
         </nav>
+      )}
+      {/* Add expense button: icon only on phones (the text stays for screen readers). */}
+      {signedIn && (
+        <Link className="btn btn-tint app-add" to="/expenses/new">
+          <Icon name="plus" size={18} />
+          <span className="app-add-text">Add expense</span>
+        </Link>
       )}
       {user && <AccountMenu user={user} />}
     </header>

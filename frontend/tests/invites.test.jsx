@@ -24,13 +24,13 @@ beforeEach(() => {
 });
 
 describe('Pending invites on Home', () => {
-  it('lists each invitation with the group name and type', async () => {
+  it('lists each invitation with the group name', async () => {
     renderApp('/home');
     const section = (await screen.findByRole('heading', { name: 'Pending invites' })).closest('section');
-    expect(within(section).getByText('You’re invited to join Lake House')).toBeInTheDocument();
-    expect(within(section).getByText('Group outing')).toBeInTheDocument();
-    expect(within(section).getByText('You’re invited to join Apartment 4B')).toBeInTheDocument();
-    expect(within(section).getByText('Roommate')).toBeInTheDocument();
+    const rows = within(section).getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('You’re invited to join Lake House.');
+    expect(rows[1]).toHaveTextContent('You’re invited to join Apartment 4B.');
     expect(screen.getByRole('button', { name: 'Accept invitation to Lake House' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Decline invitation to Lake House' })).toBeInTheDocument();
   });
@@ -135,5 +135,35 @@ describe('Pending invites on Home', () => {
     const groups = (await screen.findByRole('heading', { name: 'Your groups' })).closest('section');
     expect(within(groups).getByRole('link', { name: /Family/ })).toHaveAttribute('href', '/groups/3');
     expect(within(groups).getByText('Family', { selector: '.pill' })).toBeInTheDocument();
+  });
+});
+
+describe('Pending invites on Groups', () => {
+  it('shows the invitations above the group cards, with the title visible', async () => {
+    localStorage.setItem('groups:1', JSON.stringify([{ id: 3, name: 'Family', type: 'family' }]));
+    renderApp('/groups');
+    const title = await screen.findByRole('heading', { name: 'Pending invites' });
+    expect(title).not.toHaveClass('visually-hidden');
+    const cards = screen.getByRole('list', { name: 'Your groups' });
+    expect(title.compareDocumentPosition(cards) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(cards).getByRole('link', { name: /Family/ })).toHaveAttribute('href', '/groups/3');
+  });
+
+  it('accepting adds a card for the group without loading the page again', async () => {
+    groupsApi.acceptInvitation.mockResolvedValue(ok({ message: 'Invitation accepted.' }));
+    const user = userEvent.setup();
+    renderApp('/groups');
+    await user.click(await screen.findByRole('button', { name: 'Accept invitation to Lake House' }));
+    const cards = await screen.findByRole('list', { name: 'Your groups' });
+    expect(within(cards).getByRole('link', { name: /Lake House/ })).toHaveAttribute('href', '/groups/7');
+    expect(screen.getByText('You joined Lake House.')).toBeInTheDocument();
+    expect(groupsApi.getPendingInvitations).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Pending invites heading on Home', () => {
+  it('keeps the heading for screen readers only', async () => {
+    renderApp('/home');
+    expect(await screen.findByRole('heading', { name: 'Pending invites' })).toHaveClass('visually-hidden');
   });
 });

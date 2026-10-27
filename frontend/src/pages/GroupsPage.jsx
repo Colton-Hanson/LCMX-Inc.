@@ -1,18 +1,20 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
+import PendingInvites from '../components/PendingInvites.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
 import { getKnownGroups } from '../lib/groupCache.js';
 import { typeLabel } from '../lib/groupTypes.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
 
-// Everyone you share expenses with: the groups this browser knows about, plus a way to create a new one.
+// Everyone you share expenses with: invitations waiting for an answer, then the groups this browser knows about, plus a way to create a new one.
 // (The backend has no "list my groups" route yet, so the list comes from groups created or joined on this device.)
 export default function GroupsPage() {
   usePageTitle('Groups');
   const { profile } = useAuth();
   // WORKAROUND(no list routes): START. The full list comes from this browser's saved list, not the server (no GET /groups).
   // So it is empty on a new browser or computer even for someone who is in groups. See lib/groupCache.js.
-  const groups = getKnownGroups(profile.id);
+  const [groups, setGroups] = useState(() => getKnownGroups(profile.id));
   // WORKAROUND(no list routes): END
 
   return (
@@ -22,13 +24,15 @@ export default function GroupsPage() {
           <h1>Groups</h1>
           <p className="text-body-secondary mt-1 mb-0">Everyone you share expenses with.</p>
         </div>
-        <Link className="btn btn-tint" to="/groups/new">Create group</Link>
+        <Link className="btn btn-tint d-inline-flex align-items-center justify-content-center" to="/groups/new">Create group</Link>
       </div>
+
+      <PendingInvites onJoined={setGroups} />
 
       {groups.length === 0 ? (
         <section className="panel">
           <p className="text-body-secondary mb-0">
-            No groups on this device yet. Create one, or accept an invitation on the Home page, and it shows up here.
+            No groups on this device yet. Create one, or accept an invitation, and it shows up here.
           </p>
         </section>
       ) : (
