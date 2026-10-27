@@ -4,6 +4,7 @@ import Avatar from '../components/Avatar.jsx';
 import Dialog from '../components/Dialog.jsx';
 import InviteField from '../components/InviteField.jsx';
 import Message from '../components/Message.jsx';
+import SplitDefaultPanel from '../components/SplitDefaultPanel.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
 import { inviteMember, removeMember } from '../api/groups.js';
 import { parseGroupId, useGroupMembers, useKnownGroup } from '../lib/groupHooks.js';
@@ -213,6 +214,8 @@ function Settings({ groupId }) {
           </>
         )}
       </section>
+
+      {status === 'ready' && <SplitDefaultPanel groupId={groupId} members={members} />}
 
       {warn && (
         <Dialog title={`Remove ${warn.member.email}?`} onClose={() => setWarn(null)}>
