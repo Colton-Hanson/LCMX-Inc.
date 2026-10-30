@@ -1,0 +1,95 @@
+/* Add expense page: the dropdowns, the split list and the progress bar. Everything else uses the shared classes in styles.css. */
+
+/* Dropdowns (group, paid by), sized to match the text boxes */
+.form-select.form-select-lg {
+  min-height: 46px;
+  font-size: 1rem;
+  border-radius: 8px;
+  background-color: var(--surface);
+  color: var(--text);
+  border-color: var(--line);
+}
+.form-select.form-select-lg:focus {
+  border-color: var(--teal);
+  box-shadow: none;
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+/* Method buttons share one row, each as wide as its word plus the same padding, with a thin line between them */
+.seg.split-seg { display: flex; flex-wrap: nowrap; }
+.seg.split-seg button { position: relative; flex: 1 1 auto; min-width: 0; padding: 0 12px; }
+.seg.split-seg button + button::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: var(--line);
+}
+/* No line next to the chosen button, it already has its outline */
+.seg.split-seg button.is-on::before,
+.seg.split-seg button.is-on + button::before { display: none; }
+@media (max-width: 359.98px) {
+  .seg.split-seg button { padding: 0 6px; font-size: 0.875rem; }
+}
+
+/* One row per person in the split */
+.split-list { list-style: none; margin: 0; padding: 0; }
+.split-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.split-row:first-child { border-top: 0; padding-top: 0; }
+.split-who { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; font-weight: 600; overflow-wrap: anywhere; }
+.split-name { min-width: 0; }
+/* The arrow that opens a long email (SplitWho only adds it to emails over 22 characters); shown on phones only */
+.split-more { display: none; }
+.split-more-icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+.split-who.is-open .split-more-icon { transform: rotate(180deg); }
+@media (max-width: 575.98px) {
+  /* A long email is cut short with "…" until the arrow is pressed, then it wraps on its own line */
+  .split-who.is-long:not(.is-open) .split-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .split-row:not(.split-row--edit) .split-who.is-long:not(.is-open) { flex-basis: 0; }
+  .split-who.is-open { flex-basis: 100%; }
+  .split-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    margin: -6px -8px -6px -4px; /* 44px to tap, but takes no more room than the 32px avatar row */
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .split-more:hover { background: var(--raised); color: var(--text); }
+}
+.split-amount { margin-left: auto; min-width: 3rem; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.split-extra { margin-left: 6px; color: var(--warn); font-size: 0.8125rem; font-weight: 600; }
+.input-group.split-field { width: 9rem; flex: none; }
+
+/* Custom and percentage rows: the name on its own line on phones, the box beside it on wider screens */
+.split-row--edit .split-who { flex-basis: 100%; }
+@media (min-width: 576px) {
+  .split-row--edit .split-who { flex-basis: 9rem; }
+  .split-row--edit .split-field { margin-left: auto; }
+  .split-row--edit .split-amount { margin-left: 0; }
+}
+
+/* Progress bar for custom amounts and percentages */
+.split-bar { height: 8px; background: var(--raised); border-radius: 4px; overflow: hidden; }
+.split-bar > span { display: block; height: 100%; background: var(--warn); transition: width 0.15s; }
+.split-bar.is-done > span { background: var(--teal); }
+.split-bar.is-over > span { background: var(--error); }
+.split-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 8px 0 0; font-size: 0.9375rem; }
+.split-summary .is-bad { color: var(--warn); font-weight: 600; }

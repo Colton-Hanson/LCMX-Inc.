@@ -1,0 +1,34 @@
+/* Top bar additions: the Add expense button, and a tighter bar on phones so everything stays on one line. */
+
+/* Add expense button sits on the right, just before the account menu */
+.app-header .app-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 14px;
+}
+.app-header .app-add + .account-menu { margin-left: 0; }
+
+@media (max-width: 575.98px) {
+  /* Plus sign only; the words stay available to screen readers */
+  .app-header .app-add { padding: 0; }
+  .app-header .app-add-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* Tighter spacing so the logo, three links, the plus button and the account button fit in 375px */
+  .app-header { gap: 4px; padding: 0 12px; }
+  .app-header .app-nav { margin-left: 0; }
+  .app-header .app-nav-link { padding: 0 5px; font-size: 0.9375rem; }
+  .app-header .account-button { padding: 0 4px; }
+  .app-header .account-chevron { display: none; }
+}

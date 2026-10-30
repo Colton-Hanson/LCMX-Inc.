@@ -1,0 +1,7 @@
+/* Pending invites card: the sentence, and the group name in teal with the small logo in front of it. */
+.invite-text { margin: 0; }
+.invite-name { display: inline-flex; align-items: center; gap: 6px; vertical-align: bottom; color: var(--teal-link); }
+.invite-name svg { width: 18px; height: 18px; }
+
+/* No extra space under the last row inside the card */
+.invite-list > .row-item:last-child { padding-bottom: 0; }

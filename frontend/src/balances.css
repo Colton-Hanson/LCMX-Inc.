@@ -1,0 +1,34 @@
+/* Balances page: the two totals, the two lists and the green and red amounts. Everything else uses the shared classes in styles.css. */
+
+.bal-page {
+  --money-in: #4ade80; /* owed to you (same green as the mockup's money amounts) */
+  --money-out: #ff6b6b; /* you owe (same red as the mockup's money amounts) */
+}
+
+/* The two totals side by side, stacked on phones */
+.bal-totals { display: flex; flex-wrap: wrap; gap: 24px; }
+.panel.bal-total { flex: 1 1 240px; gap: 4px; }
+.bal-label { margin: 0; color: var(--text-muted); font-size: 0.875rem; }
+.bal-value { margin: 0; font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Owes you and You owe lists: side by side when there is room */
+.bal-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 24px; align-items: start; }
+
+/* "owes you" / "You owe" in the teal used for group names, so it stands out from the email */
+.bal-verb { color: var(--teal-link); }
+
+/* Amounts */
+.bal-amount { margin-left: auto; min-width: 84px; text-align: right; font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bal-pos { color: var(--money-in); }
+.bal-neg { color: var(--money-out); }
+
+/* Expense lines under each person: the summary line, and the full list when opened */
+.bal-detail summary { color: var(--text-muted); font-size: 0.875rem; cursor: pointer; overflow-wrap: anywhere; }
+.bal-lines { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; font-size: 0.875rem; }
+.bal-lines li { display: flex; justify-content: space-between; gap: 12px; }
+.bal-lines li span:first-child { overflow-wrap: anywhere; }
+.bal-lines li span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bal-note { margin: 8px 0 0; color: var(--text-muted); font-size: 0.8125rem; }
+
+/* Avatar stays at the top of the row while the expense list is open */
+.bal-page .row-item:has(.bal-detail[open]) { align-items: flex-start; }

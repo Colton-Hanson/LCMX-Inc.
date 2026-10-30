@@ -35,7 +35,7 @@ def calculate_splits(total, member_ids, method="even", values=None):
         {
             "shares": {user_id: Decimal("amount")},
             "rounding_adjusted_member_ids": [...]
-        } 
+        }
     """
     total = _money(total)
 
@@ -100,7 +100,6 @@ def calculate_splits(total, member_ids, method="even", values=None):
 
         remaining_cents = int((total - allocated) * 100)
 
-        print("member_ids 2 ", member_ids)
         for member_id in member_ids[:remaining_cents]:
             shares[member_id] += Decimal("0.01")
             adjusted.append(member_id)

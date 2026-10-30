@@ -1,0 +1,20 @@
+/* Group page: the amount column in Recent expenses, the split list, and the three buttons under the title. Everything else uses the shared classes in styles.css. */
+.exp-amount-col { margin-left: auto; text-align: right; }
+.exp-amount { display: block; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* "Split between N people": the summary line, and everyone's share when opened */
+.exp-split summary { color: var(--text-muted); font-size: 0.875rem; cursor: pointer; }
+.exp-split-list { display: flex; flex-direction: column; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; font-size: 0.875rem; }
+.exp-split-list li { display: flex; justify-content: space-between; gap: 12px; }
+.exp-split-list li span:first-child { overflow-wrap: anywhere; }
+.exp-split-list li span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* The split list sits under the whole row, lined up with the text column */
+.row-item > .exp-split { flex: 1 1 100%; padding-left: 46px; }
+
+/* The three buttons under the group title: text centered, and smaller on phones so all three fit on one line */
+.btn-row.group-actions .btn { display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 575.98px) {
+  .btn-row.group-actions { flex: 1 1 100%; gap: 8px; }
+  .btn-row.group-actions .btn { flex: 1 1 auto; min-height: 44px; padding: 0 8px; font-size: 0.875rem; white-space: nowrap; }
+}
