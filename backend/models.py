@@ -87,7 +87,7 @@ class Group(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "group_type IN ('roommates', 'partners', 'family', 'outing')",
+            "group_type IN ('roommate', 'partner', 'family', 'outing')",
             name="ck_groups_group_type",
         ),
     )
@@ -185,17 +185,12 @@ class Expense(Base):
     __tablename__ = "expenses"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    group_id = Column(
-        BigInteger,
-        ForeignKey("groups.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    name = Column(String(100), nullable=False)
-    amount = Column(Numeric(10, 2), nullable=False)
+    group_id = Column(BigInteger, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable = True)
     paid_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
-    paid = Column(Boolean, server_default="false", nullable=False)
-    category = Column(String(20), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+    paid = Column(Boolean, server_default = 'false')
+    category = Column(String(20), nullable = True)
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="ck_expenses_amount_positive"),
