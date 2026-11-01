@@ -3,8 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.db.session import get_db
+from app.api.routes.memberships import require_group_membership
 from app.schemas.events import EventCreate, EventResponse
 from models import Event, EventMember, Group, User, UserGroup
+
+
+group_events_router = APIRouter(prefix="/groups", tags=["Events"])
 
 
 router = APIRouter(
@@ -91,3 +95,48 @@ def create_event(
         name=new_event.name,
         member_ids=event_data.member_ids,
     )
+
+
+@group_events_router.get(
+    "/{group_id}/events",
+    response_model=list[EventResponse],
+)
+def list_group_events(
+    group_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    # Only accepted group members can view the group's events.
+    # The helper also returns 404 if the group does not exist.
+    require_group_membership(group_id, current_user, db)
+
+    events = (
+        db.query(Event)
+        .filter(Event.group_id == group_id)
+        .order_by(Event.id)
+        .all()
+    )
+    if not events:
+        return []
+
+    # Fetch participants in a single query instead of once per event.
+    event_ids = [event.id for event in events]
+    members = (
+        db.query(EventMember.event_id, EventMember.user_id)
+        .filter(EventMember.event_id.in_(event_ids))
+        .order_by(EventMember.event_id, EventMember.user_id)
+        .all()
+    )
+    member_ids_by_event = {event_id: [] for event_id in event_ids}
+    for event_id, user_id in members:
+        member_ids_by_event[event_id].append(user_id)
+
+    return [
+        EventResponse(
+            id=event.id,
+            group_id=event.group_id,
+            name=event.name,
+            member_ids=member_ids_by_event[event.id],
+        )
+        for event in events
+    ]

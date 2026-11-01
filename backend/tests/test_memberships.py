@@ -1,12 +1,12 @@
 import uuid
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.db.session import SessionLocal
-from app.api.routes import memberships
-from models import Group, User, UserGroup, UserSession
+from models import Balance, Group, User, UserGroup, UserSession
 
 
 @pytest.fixture
@@ -69,6 +69,9 @@ def membership_setup():
                     invite_status="accepted",
                 )
             )
+            db.query(User).filter(User.id == user_ids["member"]).update(
+                {User.name: "Member Test Name"}
+            )
             db.commit()
 
         yield {
@@ -129,6 +132,10 @@ def test_admin_can_list_members(membership_setup):
     assert setup["user_ids"]["admin"] in member_ids
     assert setup["user_ids"]["member"] in member_ids
     assert setup["user_ids"]["outsider"] not in member_ids
+    member = next(m for m in members if m["user_id"] == setup["user_ids"]["member"])
+    assert member["name"] == "Member Test Name"
+    admin = next(m for m in members if m["user_id"] == setup["user_ids"]["admin"])
+    assert admin["name"] is None
 
 
 def test_regular_member_can_list_members(membership_setup):
@@ -226,49 +233,50 @@ def test_missing_member_returns_404(membership_setup):
     assert response.status_code == 404
 
 
-# Removal case 2: a nonzero balance is blocked until the caller confirms.
-def test_balance_requires_confirmation(
-    membership_setup,
-    monkeypatch,
-):
+def add_outstanding_balance(setup, indebted_user_id: int):
+    """Store a real debt between the admin and member for removal tests."""
+    admin_id = setup["user_ids"]["admin"]
+    member_id = setup["user_ids"]["member"]
+    user_1_id, user_2_id = sorted((admin_id, member_id))
+
+    with SessionLocal() as db:
+        db.add(
+            Balance(
+                group_id=setup["group_id"],
+                user_1_id=user_1_id,
+                user_2_id=user_2_id,
+                indebted_party=indebted_user_id,
+                debt=Decimal("25.00"),
+            )
+        )
+        db.commit()
+
+
+# Warn when a member owes money OR is owed money.
+@pytest.mark.parametrize("indebted_role", ["member", "admin"])
+def test_balance_requires_confirmation(membership_setup, indebted_role):
     setup = membership_setup
     member_id = setup["user_ids"]["member"]
-
-    # Simulate an outstanding $25 balance.
-    monkeypatch.setattr(
-        memberships,
-        "get_member_balance",
-        lambda group_id, user_id: 25.0,
-    )
+    add_outstanding_balance(setup, setup["user_ids"][indebted_role])
 
     response = setup["clients"]["admin"].delete(
         f"/groups/{setup['group_id']}/members/{member_id}"
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"]["confirmation_required"] is True
+    detail = response.json()["detail"]
+    assert detail["confirmation_required"] is True
+    assert detail["balance"] == 25.0
 
-    # The member must still belong to the group.
     with SessionLocal() as db:
-        assert db.get(
-            UserGroup,
-            (member_id, setup["group_id"]),
-        ) is not None
+        assert db.get(UserGroup, (member_id, setup["group_id"])) is not None
 
 
-# Removal case 2, confirmed: ?confirm=true removes a member who still owes money.
-def test_balance_removal_with_confirmation(
-    membership_setup,
-    monkeypatch,
-):
+# An administrator can intentionally confirm removal despite outstanding debt.
+def test_balance_removal_with_confirmation(membership_setup):
     setup = membership_setup
     member_id = setup["user_ids"]["member"]
-
-    monkeypatch.setattr(
-        memberships,
-        "get_member_balance",
-        lambda group_id, user_id: 25.0,
-    )
+    add_outstanding_balance(setup, member_id)
 
     response = setup["clients"]["admin"].delete(
         f"/groups/{setup['group_id']}/members/{member_id}",
@@ -276,9 +284,88 @@ def test_balance_removal_with_confirmation(
     )
 
     assert response.status_code == 200
-
     with SessionLocal() as db:
-        assert db.get(
-            UserGroup,
-            (member_id, setup["group_id"]),
-        ) is None
+        assert db.get(UserGroup, (member_id, setup["group_id"])) is None
+
+
+# Persistent group default split: any accepted group member can read/save it.
+def test_split_default_round_trip_and_reset(membership_setup):
+    setup = membership_setup
+    client = setup["clients"]["member"]
+    group_id = setup["group_id"]
+    admin_id = setup["user_ids"]["admin"]
+    member_id = setup["user_ids"]["member"]
+    path = f"/groups/{group_id}/split-default"
+
+    original = client.get(path)
+    assert original.status_code == 200
+    assert original.json() == {"method": "even", "percents": {}}
+
+    payload = {"method": "percentage", "percents": {str(admin_id): 6000, str(member_id): 4000}}
+    saved = client.put(path, json=payload)
+    assert saved.status_code == 200
+    assert saved.json() == payload
+    assert setup["clients"]["admin"].get(path).json() == payload
+
+    members_response = client.get(f"/groups/{group_id}/members")
+    by_id = {m["user_id"]: m for m in members_response.json()}
+    assert by_id[admin_id]["split_percentage"] == 60.0
+    assert by_id[member_id]["split_percentage"] == 40.0
+
+    reset = client.put(path, json={"method": "even", "percents": {}})
+    assert reset.status_code == 200
+    assert client.get(path).json() == {"method": "even", "percents": {}}
+    assert all(m["split_percentage"] is None for m in client.get(f"/groups/{group_id}/members").json())
+
+
+def test_split_default_rejects_invalid_data_without_partial_writes(membership_setup):
+    setup = membership_setup
+    client = setup["clients"]["admin"]
+    gid = setup["group_id"]
+    ids = setup["user_ids"]
+    path = f"/groups/{gid}/split-default"
+    valid = {"method": "percentage", "percents": {str(ids["admin"]): 2500, str(ids["member"]): 7500}}
+    assert client.put(path, json=valid).status_code == 200
+
+    invalid = [
+        {"method": "percentage", "percents": {str(ids["admin"]): 5000}},  # missing member
+        {"method": "percentage", "percents": {str(ids["admin"]): 5000, str(ids["member"]): 4999}},
+        {"method": "percentage", "percents": {str(ids["admin"]): 5000, str(ids["member"]): 4000, str(ids["outsider"]): 1000}},
+        {"method": "percentage", "percents": {str(ids["admin"]): -10, str(ids["member"]): 10010}},
+        {"method": "even", "percents": {str(ids["admin"]): 10000}},
+    ]
+    for payload in invalid:
+        result = client.put(path, json=payload)
+        assert result.status_code == 422
+        assert client.get(path).json() == valid
+
+
+def test_split_default_auth_and_membership(membership_setup):
+    setup = membership_setup
+    path = f"/groups/{setup['group_id']}/split-default"
+    payload = {"method": "even", "percents": {}}
+    outsider = setup["clients"]["outsider"]
+    for method in ("get", "put"):
+        response = getattr(outsider, method)(path, **({"json": payload} if method == "put" else {}))
+        assert response.status_code == 403
+    with TestClient(app) as anonymous:
+        assert anonymous.get(path).status_code == 401
+        assert anonymous.put(path, json=payload).status_code == 401
+    assert setup["clients"]["admin"].get("/groups/999999999999/split-default").status_code == 404
+
+
+def test_remove_member_resets_saved_default_split(membership_setup):
+    setup = membership_setup
+    gid = setup["group_id"]
+    ids = setup["user_ids"]
+    client = setup["clients"]["admin"]
+    path = f"/groups/{gid}/split-default"
+    assert client.put(path, json={
+        "method": "percentage",
+        "percents": {str(ids["admin"]): 6000, str(ids["member"]): 4000},
+    }).status_code == 200
+    response = client.delete(f"/groups/{gid}/members/{ids['member']}")
+    assert response.status_code == 200
+    assert client.get(path).json() == {"method": "even", "percents": {}}
+    with SessionLocal() as db:
+        assert db.get(UserGroup, (ids["admin"], gid)).split_percentage is None

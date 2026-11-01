@@ -133,3 +133,105 @@ def test_all_valid_group_types(
 
     assert response.status_code == 201
     assert response.json()["group_type"] == group_type
+
+
+@pytest.fixture
+def group_read_setup():
+    """Three users and two groups; cleanup must use only a disposable DB."""
+    emails = [f"group_read_{uuid.uuid4().hex}@example.com" for _ in range(3)]
+    password = "TestPassword123!"
+    clients = [TestClient(app) for _ in emails]
+    user_ids = []
+    group_ids = []
+    try:
+        for client, email in zip(clients, emails):
+            response = client.post(
+                "/auth/register", json={"email": email, "password": password}
+            )
+            assert response.status_code == 201
+            user_ids.append(response.json()["id"])
+            assert client.post(
+                "/auth/login", json={"email": email, "password": password}
+            ).status_code == 200
+
+        for name in ("Shared Home", "Weekend Outing"):
+            response = clients[0].post(
+                "/groups", json={"name": name, "group_type": "outing"}
+            )
+            assert response.status_code == 201
+            group_ids.append(response.json()["id"])
+
+        with SessionLocal() as db:
+            db.add_all([
+                UserGroup(user_id=user_ids[1], group_id=group_ids[0],
+                          invite_status="accepted", is_admin=False),
+                UserGroup(user_id=user_ids[1], group_id=group_ids[1],
+                          invite_status="pending", is_admin=False),
+                UserGroup(user_id=user_ids[2], group_id=group_ids[0],
+                          invite_status="pending", is_admin=False),
+            ])
+            db.commit()
+
+        yield {"clients": clients, "user_ids": user_ids,
+               "group_ids": group_ids, "emails": emails}
+    finally:
+        for client in clients:
+            client.close()
+        with SessionLocal() as db:
+            if group_ids:
+                db.query(UserGroup).filter(UserGroup.group_id.in_(group_ids)).delete(
+                    synchronize_session=False
+                )
+                db.query(Group).filter(Group.id.in_(group_ids)).delete(
+                    synchronize_session=False
+                )
+            if user_ids:
+                db.query(UserSession).filter(UserSession.user_id.in_(user_ids)).delete(
+                    synchronize_session=False
+                )
+                db.query(User).filter(User.id.in_(user_ids)).delete(
+                    synchronize_session=False
+                )
+            db.commit()
+
+
+def test_list_groups_requires_auth(client):
+    assert client.get("/groups").status_code == 401
+
+
+def test_group_details_require_auth(client):
+    assert client.get("/groups/1").status_code == 401
+
+
+def test_groups_list_only_accepted_memberships(group_read_setup):
+    owner, member, outsider = group_read_setup["clients"]
+    first_id, second_id = group_read_setup["group_ids"]
+    owner_id, member_id, _ = group_read_setup["user_ids"]
+
+    owner_groups = owner.get("/groups")
+    assert owner_groups.status_code == 200
+    assert [g["id"] for g in owner_groups.json()] == [first_id, second_id]
+
+    member_groups = member.get("/groups")
+    assert member_groups.status_code == 200
+    assert [g["id"] for g in member_groups.json()] == [first_id]
+    assert member_groups.json()[0]["members"] == [
+        {"id": owner_id, "name": None,
+         "email": group_read_setup["emails"][0], "is_admin": True},
+        {"id": member_id, "name": None,
+         "email": group_read_setup["emails"][1], "is_admin": False},
+    ]
+    assert outsider.get("/groups").json() == []
+
+
+def test_group_detail_access_and_members(group_read_setup):
+    owner, member, outsider = group_read_setup["clients"]
+    first_id, second_id = group_read_setup["group_ids"]
+    response = member.get(f"/groups/{first_id}")
+    assert response.status_code == 200
+    assert response.json()["name"] == "Shared Home"
+    assert len(response.json()["members"]) == 2
+    assert owner.get(f"/groups/{first_id}").status_code == 200
+    assert member.get(f"/groups/{second_id}").status_code == 403
+    assert outsider.get(f"/groups/{first_id}").status_code == 403
+    assert owner.get("/groups/999999999999").status_code == 404

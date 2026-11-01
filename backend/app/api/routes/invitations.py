@@ -147,6 +147,11 @@ def accept_invitation(
         )
 
     membership.invite_status = "accepted"
+    # The saved percentages only apply to the previous member set.
+    # Reset to even atomically when a new member joins.
+    db.query(UserGroup).filter(UserGroup.group_id == group_id).update(
+        {UserGroup.split_percentage: None}, synchronize_session="fetch"
+    )
     db.commit()
 
     return {"message": "Invitation accepted."}

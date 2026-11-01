@@ -284,3 +284,66 @@ def test_whitespace_name_rejected(event_setup):
     )
 
     assert response.status_code == 422
+
+
+def test_list_group_events_empty(event_setup):
+    setup = event_setup
+    response = setup["clients"]["creator"].get(
+        f"/groups/{setup['group_id']}/events"
+    )
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_group_events_includes_members_and_is_ordered(event_setup):
+    setup = event_setup
+    creator = setup["user_ids"]["creator"]
+    member = setup["user_ids"]["member"]
+
+    first = create_event(setup, [member, creator])
+    assert first.status_code == 201
+    second = create_event(setup, [member])
+    assert second.status_code == 201
+
+    response = setup["clients"]["member"].get(
+        f"/groups/{setup['group_id']}/events"
+    )
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": first.json()["id"],
+            "group_id": setup["group_id"],
+            "name": "Friday Dinner",
+            "member_ids": sorted([member, creator]),
+        },
+        {
+            "id": second.json()["id"],
+            "group_id": setup["group_id"],
+            "name": "Friday Dinner",
+            "member_ids": [member],
+        },
+    ]
+
+
+@pytest.mark.parametrize("role", ["outsider", "pending"])
+def test_list_group_events_forbidden_to_nonmembers(event_setup, role):
+    setup = event_setup
+    response = setup["clients"][role].get(
+        f"/groups/{setup['group_id']}/events"
+    )
+    assert response.status_code == 403
+
+
+def test_list_group_events_missing_group(event_setup):
+    response = event_setup["clients"]["creator"].get(
+        "/groups/999999999999999999/events"
+    )
+    assert response.status_code == 404
+
+
+def test_list_group_events_requires_auth(event_setup):
+    with TestClient(app) as client:
+        response = client.get(
+            f"/groups/{event_setup['group_id']}/events"
+        )
+    assert response.status_code == 401

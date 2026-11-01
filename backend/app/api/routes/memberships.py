@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -7,7 +8,7 @@ from app.schemas.memberships import (
     MemberResponse,
     MemberRemovalResponse,
 )
-from models import Group, User, UserGroup
+from models import Balance, Group, User, UserGroup
 
 
 router = APIRouter(
@@ -19,14 +20,25 @@ router = APIRouter(
 def get_member_balance(
     group_id: int,
     user_id: int,
+    db: Session,
 ) -> float:
-    """
-    Sprint 3 placeholder.
+    """Total outstanding pairwise debt involving this member in this group.
 
-    Sprint 4 will replace this with actual balance
-    calculations from the expense data.
+    Count debts both owed by and owed to the member. A member with zero
+    group-wide net balance may still have unsettled debts with individuals.
     """
-    return 0.0
+    total = (
+        db.query(func.coalesce(func.sum(Balance.debt), 0))
+        .filter(
+            Balance.group_id == group_id,
+            or_(
+                Balance.user_1_id == user_id,
+                Balance.user_2_id == user_id,
+            ),
+        )
+        .scalar()
+    )
+    return float(total)
 
 
 def require_group_membership(
@@ -84,7 +96,9 @@ def list_members(
         MemberResponse(
             user_id=user.id,
             email=user.email,
+            name=user.name,
             is_admin=membership.is_admin,
+            split_percentage=float(membership.split_percentage) if membership.split_percentage is not None else None,
         )
         for membership, user in rows
     ]
@@ -137,7 +151,7 @@ def remove_member(
                 detail="Cannot remove the group's sole administrator.",
             )
 
-    balance = get_member_balance(group_id, user_id)
+    balance = get_member_balance(group_id, user_id, db)
 
     if abs(balance) > 0.001 and not confirm:
         raise HTTPException(
@@ -149,6 +163,11 @@ def remove_member(
             },
         )
 
+    # Removing a member invalidates any group-wide percentage allocation.
+    # Reset the surviving members to even in the same transaction.
+    db.query(UserGroup).filter(UserGroup.group_id == group_id).update(
+        {UserGroup.split_percentage: None}, synchronize_session="fetch"
+    )
     db.delete(target)
     db.commit()
 

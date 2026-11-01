@@ -16,6 +16,7 @@ from models import (
     Balance,
     Expense,
     ExpenseSplit,
+    Group,
     Split,
     User,
     UserGroup,
@@ -132,8 +133,96 @@ def get_balances(
         .all()
     )
 
+    # Fetch display names in one query, not one lookup per balance row.
+    other_user_ids = {
+        balance.user_2_id
+        if balance.user_1_id == current_user.id
+        else balance.user_1_id
+        for balance in balances
+    }
+    names_by_id = (
+        dict(db.query(User.id, User.name).filter(User.id.in_(other_user_ids)).all())
+        if other_user_ids
+        else {}
+    )
+
+    # Each entry is the signed contribution of one expense to the balance
+    # between the logged-in user and a specific other user. A positive amount
+    # means the other user owes you; a negative amount means you owe them.
+    # Query once for all relevant expenses to avoid N+1 lookups.
+    relevant_group_ids = {balance.group_id for balance in balances}
+    expense_rows = (
+        db.query(Expense, Split.user_id, Split.amount)
+        .join(ExpenseSplit, ExpenseSplit.expense_id == Expense.id)
+        .join(Split, Split.id == ExpenseSplit.split_id)
+        .filter(
+            Expense.group_id.in_(relevant_group_ids),
+            or_(
+                Expense.paid_by == current_user.id,
+                Split.user_id == current_user.id,
+            ),
+        )
+        .order_by(Expense.created_at.desc(), Expense.id.desc())
+        .all()
+        if relevant_group_ids
+        else []
+    )
+
+    # Fetch the current user's actual share separately. When this user paid,
+    # the rows above contain OTHER participants' shares instead.
+    relevant_expense_ids = {expense.id for expense, _, _ in expense_rows}
+    current_user_shares = (
+        dict(
+            db.query(ExpenseSplit.expense_id, Split.amount)
+            .join(Split, Split.id == ExpenseSplit.split_id)
+            .filter(
+                ExpenseSplit.expense_id.in_(relevant_expense_ids),
+                Split.user_id == current_user.id,
+            )
+            .all()
+        )
+        if relevant_expense_ids
+        else {}
+    )
+
+    expenses_by_pair = defaultdict(list)
+    for expense, participant_id, share in expense_rows:
+        if expense.paid_by == current_user.id:
+            # The payer's own split does not contribute to a debt.
+            if participant_id == current_user.id:
+                continue
+            other_id = participant_id
+            signed_amount = Decimal(share)
+        elif participant_id == current_user.id:
+            other_id = expense.paid_by
+            signed_amount = -Decimal(share)
+        else:
+            continue
+
+        if signed_amount == 0:
+            continue
+
+        expenses_by_pair[(expense.group_id, other_id)].append({
+            "id": expense.id,
+            "group_id": expense.group_id,
+            "description": expense.name,
+            "amount": str(expense.amount),
+            "paid_by": expense.paid_by,
+            "your_share": str(Decimal(current_user_shares.get(expense.id, 0))),
+            "counterparty_share": str(Decimal(share)) if expense.paid_by == current_user.id else None,
+            "signed_amount": str(signed_amount),
+            "created_at": expense.created_at,
+        })
+
+    group_names = (
+        dict(db.query(Group.id, Group.name).filter(Group.id.in_(relevant_group_ids)).all())
+        if relevant_group_ids
+        else {}
+    )
+
     group_balances = []
     overall_by_user = defaultdict(lambda: Decimal("0.00"))
+    overall_expenses = defaultdict(list)
 
     for balance in balances:
         other_user_id = (
@@ -153,24 +242,36 @@ def get_balances(
         else:
             net = amount
 
+        pair_expenses = expenses_by_pair[(balance.group_id, other_user_id)]
         group_balances.append(
             {
                 "group_id": balance.group_id,
+                "group_name": group_names.get(balance.group_id),
                 "other_user_id": other_user_id,
+                "other_user_name": names_by_id.get(other_user_id),
                 "net_amount": str(net),
                 "you_owe": str(max(-net, Decimal("0.00"))),
                 "owed_to_you": str(max(net, Decimal("0.00"))),
+                "expenses": pair_expenses,
             }
         )
 
         overall_by_user[other_user_id] += net
+        overall_expenses[other_user_id].extend(pair_expenses)
 
     overall_balances = [
         {
             "other_user_id": other_user_id,
+            "other_user_name": names_by_id.get(other_user_id),
             "net_amount": str(net),
             "you_owe": str(max(-net, Decimal("0.00"))),
             "owed_to_you": str(max(net, Decimal("0.00"))),
+            # One overall balance may combine multiple groups.
+            "expenses": sorted(
+                overall_expenses[other_user_id],
+                key=lambda expense: (expense["created_at"], expense["id"]),
+                reverse=True,
+            ),
         }
         for other_user_id, net in sorted(overall_by_user.items())
     ]
