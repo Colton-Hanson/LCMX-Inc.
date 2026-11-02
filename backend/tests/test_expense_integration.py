@@ -217,6 +217,8 @@ def test_api_lists_expenses_and_balances(data):
 
             assert expenses.status_code == 200
             assert len(expenses.json()) == 1
+            # Listing expenses orders by created_at, so the column must stay.
+            assert expenses.json()[0]["created_at"] is not None
             assert expenses.json()[0]["shares"] == {
                 str(alice.id): "30.00",
                 str(bob.id): "30.00",

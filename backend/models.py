@@ -186,11 +186,12 @@ class Expense(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     group_id = Column(BigInteger, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(100), nullable = True)
-    paid_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    name = Column(String(100), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
-    paid = Column(Boolean, server_default = 'false')
-    category = Column(String(20), nullable = True)
+    paid_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    paid = Column(Boolean, server_default="false", nullable=False)
+    category = Column(String(20), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="ck_expenses_amount_positive"),
