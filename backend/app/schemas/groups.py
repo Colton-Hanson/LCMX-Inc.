@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Annotated
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
@@ -17,6 +17,13 @@ class GroupCreate(BaseModel):
         return value
 
 
+class GroupMemberResponse(BaseModel):
+    id: int
+    name: str | None
+    email: str
+    is_admin: bool
+
+
 class GroupResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -24,3 +31,10 @@ class GroupResponse(BaseModel):
     name: str
     group_type: str
     created_by: int
+    members: list[GroupMemberResponse] = Field(default_factory=list)
+
+
+class GroupSplitDefault(BaseModel):
+    # Match frontend splitDefault.js: basis points, 5000 = 50.00%.
+    method: Literal["even", "percentage"]
+    percents: dict[int, Annotated[int, Field(strict=True, ge=0, le=10000)]]

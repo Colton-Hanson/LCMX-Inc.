@@ -7,7 +7,7 @@ from app.api.routes.profile import router as profile_router
 from app.api.routes.groups import router as groups_router
 from app.api.routes.invitations import router as invitations_router
 from app.api.routes.memberships import router as memberships_router
-from app.api.routes.events import router as events_router
+from app.api.routes.events import router as events_router, group_events_router
 from app.api.routes import expenses
 
 
@@ -25,6 +25,7 @@ app.include_router(groups_router)
 app.include_router(invitations_router)
 app.include_router(memberships_router)
 app.include_router(events_router)
+app.include_router(group_events_router)
 
 @app.get("/")
 def root():

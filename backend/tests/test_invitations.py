@@ -247,3 +247,18 @@ def get_outsider_email(setup):
     with SessionLocal() as db:
         user = db.get(User, setup["outsider_id"])
         return user.email
+
+def test_accept_invitation_resets_existing_default_split(invitation_setup):
+    setup = invitation_setup
+    gid = setup["group_id"]
+    inviter = setup["clients"]["inviter"]
+    split_path = f"/groups/{gid}/split-default"
+    payload = {"method": "percentage", "percents": {str(setup["inviter_id"]): 10000}}
+    assert inviter.put(split_path, json=payload).status_code == 200
+    assert send_invitation(setup).status_code == 201
+    # Pending invitations must not change a configured default.
+    assert inviter.get(split_path).json() == payload
+    assert setup["clients"]["invitee"].post(f"/groups/{gid}/invitations/accept").status_code == 200
+    assert inviter.get(split_path).json() == {"method": "even", "percents": {}}
+    with SessionLocal() as db:
+        assert all(m.split_percentage is None for m in db.query(UserGroup).filter(UserGroup.group_id == gid).all())
