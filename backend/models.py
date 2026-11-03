@@ -25,6 +25,7 @@ from sqlalchemy import (
     DateTime,
     Boolean,
     CheckConstraint,
+    Date,
 )
 
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
@@ -211,14 +212,21 @@ class Budget(Base):
 # === Items (NOT in original draft — inferred placeholder, see note above) ===
 
 class Item(Base):
-    """
-    Placeholder: referenced by item_splits and item_and_expense but never
-    defined in the ERD draft. Fill in real columns once confirmed
-    (likely name, price, quantity).
-    """
     __tablename__ = "items"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=True)
+    quantity = Column(BigInteger, nullable=False)
+    unit_price = Column(Numeric(10,2), nullable=False)
+    line_total = Column(Numeric(10,2), nullable=False)
+    position = Column(BigInteger, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("quantity > 0", name="ck_items_quantity_positive"),
+        CheckConstraint("unit_price >= 0", name="ck_items_unit_price_nonnegative"),
+        CheckConstraint("line_total = quantity * unit_price", name="ck_items_line_total_accurate"),
+        CheckConstraint("position >= 0", name="ck_items_position_nonnegative"),
+    )
 
 
 # === Splits ===
@@ -350,8 +358,6 @@ class UserSession(Base):
     )
 
 
-
-
 # === Audit Log ===
 
 class AuditLog(Base):
@@ -365,3 +371,39 @@ class AuditLog(Base):
     new_data = Column(JSONB, nullable=True)
     changed_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
     changed_at = Column(TIMESTAMP(timezone=True), default=datetime.utcnow, nullable=False)
+
+
+
+# === Receipts ===
+class Receipt(Base):
+    __tablename__ = "receipts"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    uploader = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    expense_id = Column(BigInteger, ForeignKey("expenses.id"), nullable=True)
+    file_path = Column(String(1024), nullable=False)
+    file_type = Column(String(16), nullable=False)
+    size = Column(BigInteger, nullable=False)
+    status = Column(String(255), nullable=False)
+    store = Column(String(255), nullable=True)
+    store_location = Column(String(255), nullable=True)
+    receipt_date = Column(Date, nullable=True)
+
+    __table_args__ = (
+    CheckConstraint(
+        "file_type IN ('jpg', 'png', 'jpeg', 'pdf', 'png', 'img', 'heic')",
+        name="ck_receipts_file_type",
+    ),
+    CheckConstraint(
+        "status IN ('uploaded', 'reading', 'read', 'failed')",
+        name="ck_receipts_status",
+    ),
+    )
+
+class Receipt_Item(Base):
+    __tablename__ = "receipt_items"
+    receipt_id = Column(BigInteger, ForeignKey("receipts.id"), nullable=False)
+    item_id = Column(BigInteger, ForeignKey("items.id"), nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("receipt_id", "item_id"),
+    )
