@@ -378,6 +378,7 @@ class AuditLog(Base):
 class Receipt(Base):
     __tablename__ = "receipts"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    group_id = Column(BigInteger, ForeignKey("groups.id"), nullable=False)
     uploader = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     expense_id = Column(BigInteger, ForeignKey("expenses.id"), nullable=True)
     file_path = Column(String(1024), nullable=False)
