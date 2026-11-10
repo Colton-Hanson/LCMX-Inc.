@@ -1,0 +1,382 @@
+# Test Documentation: Shared Expense Management Tool
+
+*CS451R Agile Software Engineering Capstone, Fall 2026 · Required document 5*
+
+| Field | Entry |
+|---|---|
+| Project | Shared Expense Management Tool |
+| Team | Colton "Cole" Hanson (frontend, LLM), Mick Leinbach (database), Lukas Viskovic (backend), Xander McKie (testing, documentation) |
+| Document owner | Xander McKie |
+| Instructor | Prof. Jawad |
+| Sponsor | Commerce Bank |
+| Version and date | 1.0 Draft, October 30, 2026 |
+| Status | Draft. Updated at every iteration close-out; final test report in Iteration 10 (Dec 4). |
+
+**Status legend:** ✅ Pass · ❌ Fail · ⏳ Not run yet (feature not built) · ⚠️ Pass with a known gap
+
+## Revision history
+
+| Version | Date | Author | Change |
+|---|---|---|---|
+| 1.0 | Oct 30, 2026 | Xander McKie | First version: test plan, test cases for Iterations 0 to 4 and the planned features, and the Oct 30 test run. |
+
+## Contents
+
+1. [Test plan](#1-test-plan)
+2. [Test cases](#2-test-cases)
+3. [Test report (Oct 30, 2026 run)](#3-test-report-oct-30-2026-run)
+4. [How to run the tests](#4-how-to-run-the-tests)
+
+---
+
+# 1 Test plan
+
+## 1.1 Objectives
+
+1. Prove every requirement that is built works as the Requirements Specification says, with an automated test where possible (NFR-QUA-01).
+2. Catch a break in the week it happens. The full suite runs at every Friday close-out, not only in the final week.
+3. Prove money is right to the cent: every split adds up to its total and leftover cents are shown, never lost (NFR-DAT-04).
+4. Prove one user can never read or change another user's data, including administrators (NFR-SEC-07).
+5. Prove the app works on a phone and a PC, and with a screen reader (NFR-CMP, NFR-A11Y).
+6. For the receipt feature, measure how often the AI reads a receipt correctly across lighting and formats (NFR-PER-02).
+
+## 1.2 Scope
+
+| In scope | Out of scope |
+|---|---|
+| Accounts, sessions, profile and settings | Internal behavior of third-party libraries (FastAPI, React, SQLAlchemy) |
+| Groups, invitations, members, events | The LLM vendor's own model quality, beyond our 15-receipt accuracy set |
+| Manual expenses, splits, balances | Real bank data or real money movement (the product never does either) |
+| Receipt upload, AI reading, review and assignment (from Iteration 6) | Native mobile apps (the product is a web app) |
+| Settle up, budgets, analysis, activity, admin (Iterations 7 to 9) | Browsers older than the current versions of Chrome, Safari, Firefox and Edge |
+| Security, accessibility, phone layout, load (Iteration 10 audits) | |
+
+## 1.3 Strategy: test levels
+
+| Level | What it checks | Tool | Who writes it |
+|---|---|---|---|
+| Unit | Pure logic with no database: split calculator, expense validation, frontend validators and money formatting | pytest, Vitest | Feature owner; Xander reviews |
+| API integration | Each route against a real PostgreSQL database: status codes, saved rows, authorization, rollback | pytest + FastAPI `TestClient` | Lukas and Xander |
+| Frontend component | Each screen renders, validates, calls the right endpoint and handles errors; the backend is mocked | Vitest + React Testing Library + jsdom | Cole and Xander |
+| End-to-end | A real browser against the running app: two users, a full flow from group to balance | Playwright | Xander |
+| Accessibility | Automated WCAG 2 A and AA rules on every screen, then a manual keyboard and screen reader pass | axe-core, NVDA or VoiceOver | Cole and Xander |
+| Responsive | No sideways scrolling at a 390 px phone width on every screen | Playwright | Xander |
+| Security | Login required on every protected route, open data exposure, password rule, rate limits, HTTPS, cookies | pytest probes, security checklist | Lukas and Xander |
+| Receipt accuracy | Items, prices, store and date read correctly from 15 synthetic receipts (clean, crumpled, dim, angled, PDF) | Manual run, logged | Xander and Cole |
+| Load | The app stays responsive with several simultaneous users | Load script against the live server | Mick |
+
+## 1.4 Tools and versions
+
+| Tool | Version | Used for |
+|---|---|---|
+| pytest | 9.1.1 | Backend unit and API tests (`backend/tests`) |
+| FastAPI `TestClient` (httpx) | FastAPI 0.141.1, httpx 0.28.1 | Calling routes in tests without a running server |
+| Vitest | 5.0.3 | Frontend tests (`frontend/tests`) |
+| React Testing Library, user-event, jest-dom | 16, 14, 6 | Rendering screens and simulating clicks and typing |
+| jsdom | 24 | A simulated browser for frontend tests |
+| Playwright (Chromium) | Pre-installed | End-to-end walkthrough, phone-width checks, screenshots |
+| axe-core | 4.10.2 | Automated accessibility scan |
+| PostgreSQL | 16 | Test databases `shared_expense_dev` and `shared_expense_sprint4_test` |
+| GitHub Actions | Planned for Iteration 6 | Run both suites on every pull request |
+| JIRA | n/a | Bug tickets (severity, owner, steps) |
+
+**Test framework note (OI-26):** the Charter and NFR-QUA-01 name `unittest` (PyUnit). The backend suite is written in pytest and the frontend in Vitest. pytest also runs `unittest`-style tests, so nothing written for PyUnit is lost. This exception still needs to be written into the README and the Requirements Specification.
+
+## 1.5 Test environment and data
+
+- **Local:** each developer runs Postgres in Docker (`docker compose up -d`), the backend on port 8000 and the frontend on port 5173.
+- **Test databases:** integration tests run inside a transaction on `shared_expense_sprint4_test` and roll back, so they leave no rows behind. Other API tests use the development database.
+- **Live server:** from Iteration 6, every regression run and the final load check run against the hosted HTTPS server.
+- **Data:** synthetic only. The seed creates four accounts (`alice`, `bob`, `carol`, `dave` at `example.com`) with two groups, one event and nine expenses. No real names, cards or bank details are ever used.
+
+## 1.6 Roles and resources
+
+| Person | Testing responsibility |
+|---|---|
+| Xander McKie | Owns this document, the regression run at every close-out, end-to-end and accessibility runs, the receipt accuracy set, and the final test report |
+| Lukas Viskovic | API tests for every backend route he writes; security checklist fixes |
+| Cole Hanson | Component tests for every screen he writes; screen reader pass; LLM pipeline tests with recorded replies |
+| Mick Leinbach | Migrations run cleanly on an empty database; seed works; load check |
+
+Testing time is part of each person's hours in the Team Effort Estimation (document 6).
+
+## 1.7 Schedule
+
+| When | Test activity |
+|---|---|
+| Every pull request | Both suites run (by hand now; GitHub Actions from Iteration 6) |
+| Every Friday close-out | Full regression, failures filed as JIRA bugs |
+| Iteration 6 (Nov 2 to 6) | Upload and reading tests with recorded LLM replies; first 15-receipt accuracy run |
+| Iteration 7 (Nov 9 to 13) | Review math, settlement, receipt deletion |
+| Iteration 8 (Nov 16 to 20) | Budgets, analysis, activity; security checklist pass on what is live |
+| Iteration 9 (Nov 23 to 25) | A test for every blocked admin path; rate limits |
+| Iteration 10 (Nov 30 to Dec 2) | Full test pass, security audit, ADA checklist and screen reader pass, load check, final report |
+
+## 1.8 Entry and exit criteria
+
+**A story can be called done when:** its automated test passes, the full suite still passes, someone other than the author reviewed it, and it runs from the README (Definition of Done).
+
+**The product is ready for final delivery when:**
+
+- 100% of backend and frontend tests pass on `main`.
+- No open Blocker or Major bugs.
+- Every MUST requirement has at least one passing test case below.
+- The security and ADA checklists are complete.
+- The load check and the receipt accuracy run are logged in this report.
+
+## 1.9 Bug severity
+
+| Severity | Meaning | Rule |
+|---|---|---|
+| Blocker | The app or a core flow cannot run | Fixed before any new work |
+| Major | A requirement is broken or data is wrong or exposed | Fixed before the iteration's review |
+| Minor | Cosmetic, wording, or documentation | Goes to the backlog |
+
+Every fix adds a test that fails without it. Xander re-tests and closes the ticket.
+
+---
+
+# 2 Test cases
+
+Each case lists the automated test that covers it (`file::test`), or "E2E" for the Playwright walkthrough, "Probe" for a direct API check, or "Manual". Status is from the Oct 30 run on the pre-merge code (commit `8c8498e`); Section 3 explains what changed on `main` afterward.
+
+## 2.1 Accounts and sessions (UC-01, UC-13, UC-16)
+
+| ID | Scenario | Input and steps | Expected result | Req. | Covered by | Status |
+|---|---|---|---|---|---|---|
+| TC-ACC-01 | Register a new account | Valid email, password `Aaaaaaa!` | 201 and the account exists | FR-ACC-01 | `test_auth::test_registration_succeeds` | ✅ |
+| TC-ACC-02 | Register an email that already exists | Same email twice | 409 on the second try | FR-ACC-01 | `test_auth::test_duplicate_registration_returns_409` | ✅ |
+| TC-ACC-03 | Invalid registration | Bad email or short password | 422 with the reason | FR-ACC-02, 03 | `test_auth::test_invalid_registration_returns_422` | ✅ |
+| TC-ACC-04 | Password rule on the server | `aaaaaaaa`, `Aaaaaaaa`, `Aaaaaaa1`, then `Aaaaaaa!` | First three rejected (no capital, no symbol); last accepted | FR-ACC-03 | Probe; `test_auth::test_change_password_rejects_*` | ✅ |
+| TC-ACC-05 | Password rule in the browser | Type a weak password on Register | Each unmet rule is shown; submit blocked | FR-ACC-03, 04 | `validators.test.js`, `forms.test.jsx` | ✅ |
+| TC-ACC-06 | Email case ignored | Register `Ann@Example.com`, log in as `ann@example.com` | Same account | FR-ACC-01 | `test_auth::test_registration_and_login_ignore_email_case` | ✅ |
+| TC-ACC-07 | Wrong password and unknown email give the same error | Bad password; unknown email | Both 401 with the same wording | FR-ACC-08 | `test_auth::test_bad_login_returns_401`, `test_unknown_email_login_returns_same_401` | ✅ |
+| TC-ACC-08 | Log in, see who I am, log out | Log in, `GET /auth/me`, log out, `GET /auth/me` | 200, then 401 after logout | FR-ACC-07, 10 | `test_auth::test_login_me_logout_flow` | ✅ |
+| TC-ACC-09 | Expired or revoked session | Session past its expiry, or revoked | 401, no error page | FR-ACC-13 | `test_auth::test_expired_session_returns_401`, `test_revoked_session_returns_401` | ✅ |
+| TC-ACC-10 | Change password | Correct current password and a valid new one | Saved; old sessions revoked | FR-ACC-16 | `test_auth::test_change_password_succeeds_and_revokes_session` (+4 rejection cases) | ✅ |
+| TC-ACC-11 | Guest opens an internal page | Not logged in, open `/balances`, `/groups/3`, `/does-not-exist` | Sent to `/login` every time | FR-ACC-12 | `routeGuard.test.jsx` (12 tests); E2E | ✅ |
+| TC-ACC-12 | Passwords never stored in plain text | Inspect `users.password_hash` after registering | Argon2 hash, not the password | FR-ACC-05, NFR-SEC-02 | Database check on Oct 30 (`$argon2id$...`) | ✅ |
+| TC-ACC-13 | Profile: view and edit name | Change name only | Name saved, nothing else changes; blank name rejected | FR-ACC-14, 17 | `test_profile::test_patch_*` (5 tests), `settings.test.jsx` | ✅ |
+| TC-ACC-14 | Email change needs verification | Request change, confirm with token | Email changes only after a valid token; taken or same email rejected | FR-ACC-15 | `test_profile::test_email_change_*`, `test_confirm_*` (8 tests) | ✅ |
+| TC-ACC-15 | Profile photo path is safe | Absolute path, `..` path, path outside uploads | All rejected | NFR-SEC-03 | `test_profile::test_patch_rejects_*photo*` (3 tests) | ✅ |
+| TC-ACC-16 | Password reset | Request a reset link | Reset by email | FR-ACC-11 (SHOULD, stretch) | Not built | ⏳ |
+
+## 2.2 Groups, invitations, members, events (UC-04, UC-05, UC-06)
+
+| ID | Scenario | Input and steps | Expected result | Req. | Covered by | Status |
+|---|---|---|---|---|---|---|
+| TC-GRP-01 | Create a group | Name and one of the four types | 201; creator is the accepted admin | FR-GRP-01, 02 | `test_groups::test_create_group_success`, `test_all_valid_group_types` (4); E2E | ✅ |
+| TC-GRP-02 | Bad group type or logged out | Type `club`; no session | 422; 401 | FR-GRP-01 | `test_groups::test_create_group_invalid_type`, `test_create_group_unauthenticated` | ✅ |
+| TC-GRP-03 | Cancel group creation | Fill the form, press Cancel | Nothing saved | FR-GRP-06 | `createGroup.test.jsx` | ✅ |
+| TC-GRP-04 | Invite by email | Invite an existing user | Shown as pending to the invitee | FR-GRP-03, 04 | `test_invitations::test_invitation_created`, `test_pending_invitations`; E2E | ✅ |
+| TC-GRP-05 | Invite twice, or invite an unregistered email | Same email again; email with no account | 409; reported as registration required, no membership | FR-GRP-03, 05 | `test_invitations::test_duplicate_invitation_returns_409`, `test_unregistered_email` | ✅ |
+| TC-GRP-06 | Accept or decline | Invitee presses Accept, or Decline | Accept adds the group; Decline adds nothing | FR-GRP-07 | `test_invitations::test_accept_invitation`, `test_decline_invitation`, `invites.test.jsx`; E2E | ✅ |
+| TC-GRP-07 | Only the invitee can answer; outsiders cannot invite | Another user tries to accept; a non-member invites | Refused | NFR-SEC-07 | `test_invitations::test_only_invitee_can_accept`, `test_outsider_cannot_invite` | ✅ |
+| TC-GRP-08 | List members | Member and outsider ask for the member list | Member sees it; outsider refused | FR-GRP-08 | `test_memberships::test_*_list_members` (3) | ✅ |
+| TC-GRP-09 | Remove a member with zero balance | Admin removes a member who owes nothing | Removed at once | FR-GRP-10 | `test_memberships::test_admin_can_remove_member` | ✅ |
+| TC-GRP-10 | Remove a member who still owes money | Bob owes Alice $31.62 in Road Trip; Alice removes Bob without confirming | Warning, removal refused until confirmed | FR-GRP-09, 11 | Unit tests stub a $25 balance and pass; Probe against real data removed Bob with no warning | ❌ BUG-05 |
+| TC-GRP-11 | Sole admin removes themself; non-admin removes someone | As described | Both refused | FR-GRP-12 | `test_memberships::test_sole_admin_cannot_remove_self`, `test_regular_member_cannot_remove` | ✅ |
+| TC-GRP-12 | Create an event for all or some members | Name plus All members, or picked members | 201 with the chosen members | FR-GRP-13 | `test_events::test_create_event_success`, `test_event_with_subset_of_members`; E2E | ✅ |
+| TC-GRP-13 | Event with no members, outsiders, pending or duplicate members | As described | 422 | FR-GRP-15 | `test_events::test_empty_participants_rejected` and 4 more | ✅ |
+| TC-GRP-14 | Tag an expense to an event | Add an expense inside an event | Expense counts only for the event's members | FR-GRP-14 | Not built (Iteration 7, ADR-05) | ⏳ |
+| TC-GRP-15 | My groups on a second device | Log in as Bob, who belongs to two groups, in a fresh browser | Both groups listed | FR-GRP-01, NFR-CMP-01 | E2E | ❌ BUG-06 |
+
+## 2.3 Expenses, splits, balances (UC-07, UC-09, UC-10)
+
+| ID | Scenario | Input and steps | Expected result | Req. | Covered by | Status |
+|---|---|---|---|---|---|---|
+| TC-EXP-01 | Add an expense with an even split | Road Trip, "Gas", $63.25, paid by Alice, Alice and Bob | Saved; shares $31.63 and $31.62; the extra cent is flagged on screen | FR-EXP-01 to 03, FR-SPL-07, 08 | `test_expenses::test_create_expense_success`; `addExpense.test.jsx`; E2E | ✅ |
+| TC-EXP-02 | Category on an expense | Choose a category on Add Expense | Saved with the expense | FR-EXP-01 | Form and API have no category field | ❌ BUG-07 |
+| TC-EXP-03 | Invalid expense input | $0, -$5.00, $10.001, NaN, a blank title, a bad group or payer id, no participants, a repeated participant, an unknown split method; a 101-character title in the form | Rejected with a reason, nothing saved | FR-EXP-01, NFR-SEC-03 | `test_expense_validation::test_invalid_expense_schema` (11 cases); `expenseValidators.test.js` | ✅ |
+| TC-EXP-04 | Payer or participant outside the group | Non-member as payer or in the split; non-member creates | Refused | NFR-SEC-07 | `test_expense_validation::test_rejects_*` (4) | ✅ |
+| TC-EXP-05 | Even split with a remainder | $10.00 three ways | 3.34 / 3.33 / 3.33, extra cent named | FR-SPL-08, NFR-DAT-04 | `test_split_calculator::test_even_split_with_remainder`, `test_one_cent_split_between_three_members` | ✅ |
+| TC-EXP-06 | Custom amounts | Amounts that add to the total; amounts that do not | First saved; second refused | FR-SPL-04, 06 | `test_split_calculator::test_custom_split`, `test_custom_amounts_must_match_the_total` | ✅ |
+| TC-EXP-07 | Percentages | 50/30/20 of $100; percentages that do not total 100 | First gives $50.00, $30.00, $20.00; second refused | FR-SPL-06 | `test_split_calculator::test_percentage_split`, `test_percentage_rounding`, `test_percentages_must_total_100` | ✅ |
+| TC-EXP-08 | Switch from autosplit to manual | Pick Even, then Custom, edit amounts | Live preview updates; submit blocked until totals match | FR-SPL-10 | `addExpense.test.jsx`, `splits.test.js` | ✅ |
+| TC-EXP-09 | Saving is all or nothing | Force the balance update to fail | Expense and splits rolled back | FR-EXP-03, NFR-DAT-01 | `test_expense_integration::test_failed_balance_update_rolls_back_expense` | ✅ |
+| TC-EXP-10 | Opposite debts net out | Two even expenses whose debts run opposite ways ($30 one way, $20 the other) | One balance of $10 | FR-SPL-11 | `test_expense_integration::test_opposite_debts_are_netted` | ✅ |
+| TC-EXP-11 | Balances page | After TC-EXP-01, open Balances as Alice | "Bob owes you +$31.62", You owe $0.00 | FR-SPL-12 | `balances.test.jsx` (17); E2E | ✅ |
+| TC-EXP-12 | Balances stay inside each group, and private | Two groups; an outsider asks | Per-group balances; outsider sees none | NFR-SEC-07 | `test_expense_integration::test_balances_are_group_specific`, `test_balance_routes::test_user_cannot_see_another_groups_balances` | ✅ |
+| TC-EXP-13 | List a group's expenses | Member opens the group page | Newest first with each share; non-members refused | FR-EXP-02 | `test_expense_integration::test_api_lists_expenses_and_balances`, `test_expenses::test_list_expenses_*`, `groupExpenses.test.jsx` | ✅ at `8c8498e`; ❌ on `main` (BUG-02) |
+| TC-EXP-14 | Default split for a group | Save 60/40 in Group settings, then add an expense on another device | Second device starts at 60/40 | FR-SPL-09 | `splitDefaultPanel.test.jsx` passes; the default is saved only in the browser | ⚠️ BUG-06 |
+| TC-EXP-15 | Edit and delete an expense | Change an amount; delete with confirmation | Balances recalculated | FR-EXP-32, NFR-DAT-02, 03 | Not built (Iteration 7) | ⏳ |
+| TC-EXP-16 | Settle up in full or in part | Record $20 of a $31.62 debt | $11.62 left; both users' history shows it; wording says no money moves | FR-SPL-13 to 17 | Not built (Iteration 7) | ⏳ |
+
+## 2.4 Receipts and AI reading (UC-02, UC-08, UC-14), planned
+
+| ID | Scenario | Expected result | Req. | Planned test | Status |
+|---|---|---|---|---|---|
+| TC-RCP-01 | Upload a JPEG, PDF or camera photo | Accepted with a clear success indicator | FR-EXP-10 to 12 | API test with sample files; Playwright on a phone viewport | ⏳ It6 |
+| TC-RCP-02 | Upload the wrong type, an oversized file, a corrupt file | Each refused with its own cause and fix | FR-EXP-16 | API tests | ⏳ It6 |
+| TC-RCP-03 | AI reads a receipt | Store, date, items and prices saved as JSON and shown | FR-EXP-13 to 15 | pytest with recorded LLM replies (no real API calls in CI) | ⏳ It6 |
+| TC-RCP-04 | AI cannot read it | "Uploaded, but could not read" shown, distinct from an upload failure; manual entry offered | FR-EXP-17 | Recorded bad reply; component test | ⏳ It6 |
+| TC-RCP-05 | Reading accuracy across lighting | Accuracy logged for 15 synthetic receipts (clean, crumpled, dim, angled, PDF) | NFR-PER-02 | Manual run, logged in Section 3 | ⏳ It6 |
+| TC-RCP-06 | Review and assign items | Every item editable; each assigned to one or more people; unassigned items flagged and excluded; shares shown before save | FR-EXP-20 to 24 | Component and math tests | ⏳ It7 |
+| TC-RCP-07 | Cancel review, then save | Cancel saves nothing; save updates balances | FR-EXP-25, 26 | API test | ⏳ It7 |
+| TC-RCP-08 | Delete the receipt picture, keep the items | Confirmation states what is kept; failure keeps the picture | FR-EXP-30, 31, 33 | API and component tests | ⏳ It7 |
+
+## 2.5 Budgets, analysis, activity, admin, planned
+
+| ID | Scenario | Expected result | Req. | Status |
+|---|---|---|---|---|
+| TC-BUD-01 | Set a monthly goal per category, personal or group | Spending tracked against each goal | FR-BUD-01 to 04 | ⏳ It8 |
+| TC-BUD-02 | Go over a goal | Shown as over; never blocked | FR-BUD-06 | ⏳ It8 |
+| TC-BUD-03 | Edit a goal mid-month | Follows the OI-09 rule | FR-BUD-05 | ⏳ It8 |
+| TC-ANL-01 | Analysis for a month or date range | Contribution vs configured split, spend by category and store, category chart | FR-ANL-01 to 04 | ⏳ It8 |
+| TC-ANL-02 | New account with no history | Defined empty state, no broken chart | FR-ANL-05 | ⏳ It8 |
+| TC-SOC-01 | Activity history | Expenses, splits, settlements and membership changes listed for the users involved only | FR-SOC-01 | ⏳ It8 |
+| TC-ADM-01 | Admin login | Separate page; checked against the admin role table; same generic error as user login | FR-ADM-01, 02, 06 | ⏳ It9 |
+| TC-ADM-02 | Admin dashboard | Only uptime, error log count, total users, flagged issues | FR-ADM-03 | ⏳ It9 |
+| TC-ADM-03 | Admin tries to open a user's data; non-admin opens an admin page | Both blocked and logged | FR-ADM-05, 07, NFR-SEC-07 | ⏳ It9 |
+
+## 2.6 Security, compatibility, accessibility, performance
+
+| ID | Scenario | Input and steps | Expected result | Req. | Covered by | Status |
+|---|---|---|---|---|---|---|
+| TC-SEC-01 | Every protected route needs a session | Call expenses, balances, groups, events, profile with no cookie | 401 | NFR-SEC-04 | `*_requires_authentication`, `*_unauthenticated_*` tests | ✅ |
+| TC-SEC-02 | No route exposes other users' data | `GET /users` with no cookie | 401 or route removed | NFR-SEC-07 | Probe: 200 with every user's id and email | ❌ BUG-04 |
+| TC-SEC-03 | Login is rate limited | 25 wrong passwords in a row | 429 after a limit | NFR-SEC-05 | Probe: 25 × 401, no limit | ❌ BUG-08 |
+| TC-SEC-04 | Secrets stay out of git | Search the repo for hard-coded keys and passwords | Only `.env.example` placeholders and test or seed values | NFR-SEC-06 | `git grep` on Oct 30 | ✅ |
+| TC-SEC-05 | HTTPS and secure cookie | Open the live site over HTTP | Redirected to HTTPS; cookie has Secure and HttpOnly | NFR-SEC-01 | Not deployed yet (Iteration 6) | ⏳ |
+| TC-CMP-01 | Phone width | Every screen at 390 px | No sideways scroll; menu reconfigures; buttons touch-sized | NFR-CMP-01 to 04 | Playwright: 9 of 9 screens pass | ✅ |
+| TC-A11Y-01 | Automated accessibility scan | axe-core WCAG 2 A and AA on 11 screens | No violations | NFR-A11Y-02, 03 | axe-core 4.10.2: 0 violations on 11 of 11 | ✅ |
+| TC-A11Y-02 | Screen reader and keyboard only | Complete group → expense → balance with NVDA or VoiceOver, no mouse | Every control named and reachable | NFR-A11Y-03, 04 | Manual, Iteration 10 | ⏳ |
+| TC-DAT-01 | Demo database from empty | Migrate and seed an empty database | Ready in under a minute with working logins | It5-1 | Timed: 1.9 s; logins work | ✅ |
+| TC-DAT-02 | Seeded expenses show in Balances | Log in as Alice after seeding | Balances reflect the 9 seeded expenses | FR-SPL-11 | Balances empty for every seeded user | ❌ BUG-03 |
+| TC-PER-01 | Several users at once | Simultaneous users on the live server | Pages stay responsive | NFR-PER-01 | Iteration 10 | ⏳ |
+| TC-USE-01 | First-time user understands the site | Two people outside the team, no help | Understand it in under 3 minutes | NFR-USE-01 | Iteration 10 | ⏳ |
+
+---
+
+# 3 Test report (Oct 30, 2026 run)
+
+## 3.1 What was run
+
+| Item | Detail |
+|---|---|
+| Date | Friday Oct 30, 2026 (Iteration 5 close-out) |
+| Run by | Xander McKie |
+| Code tested | `8c8498e` (`main` before PR #9, the code from Oct 27) and `e72a276` (`main` after PR #9, Mick's Sprint 5 seed, merged Oct 30) |
+| Environment | Linux, Python 3.13.17, PostgreSQL 16.15, Node.js 22.23.4, Chromium via Playwright |
+| Data | Empty test databases, then the Sprint 5 seed; synthetic accounts only |
+
+Python 3.13 was used here; the README asks for 3.12. All pinned packages installed and every test passed at `8c8498e`, so this did not affect results.
+
+## 3.2 Results summary
+
+| Suite | Code | Tests | Passed | Failed | Time |
+|---|---|---|---|---|---|
+| Backend (pytest) | `8c8498e` | 120 | 120 | 0 | 36.2 s |
+| Backend (pytest) | `e72a276` | 120 | 119 | 1 | 37.7 s |
+| Frontend (Vitest) | `e72a276` (frontend unchanged by PR #9) | 302 in 22 files | 302 | 0 | 33.0 s |
+| Migrations on an empty database | `8c8498e` | `alembic upgrade head` | ✅ | | |
+| Migrations on an empty database | `e72a276` | `alembic upgrade head` | | ❌ "Multiple head revisions" | |
+| End-to-end walkthrough, two users | `8c8498e` backend | 8 steps | 8 | 0 | |
+| Phone width (390 px) | same | 9 screens | 9 | 0 | |
+| Accessibility scan (axe-core, WCAG 2 A/AA) | same | 11 screens | 11 (0 violations) | 0 | |
+| Security and data probes | same | 5 checks | 2 | 3 | |
+
+**Pass rate for automated tests on the pre-merge code: 422 of 422 (100%).** On current `main`, 421 of 422 pass, and the database cannot be built from scratch until BUG-01 is fixed.
+
+## 3.3 Backend tests by file
+
+| File | Tests | What it covers |
+|---|---|---|
+| `test_auth.py` | 16 | Register, login, logout, sessions, password change and rules |
+| `test_profile.py` | 16 | Profile view and edit, photo path safety, email change with token |
+| `test_expense_validation.py` | 19 | Expense input rules, membership of payer and participants |
+| `test_split_calculator.py` | 18 | Even, custom and percentage splits, rounding, invalid splits |
+| `test_events.py` | 11 | Event creation, member rules |
+| `test_memberships.py` | 10 | List and remove members, admin rules, balance confirmation (stubbed) |
+| `test_invitations.py` | 9 | Invite, accept, decline, duplicates, outsiders |
+| `test_groups.py` | 7 | Create group, types, login required |
+| `test_expense_integration.py` | 6 | Saving to the database, netting, per-group balances, rollback |
+| `test_expenses.py` | 5 | Expense routes, login and membership required |
+| `test_balance_routes.py` | 2 | Balances need login and stay private |
+| `test_health.py` | 1 | Health check |
+| **Total** | **120** | |
+
+## 3.4 Frontend tests by file
+
+| File | Tests | File | Tests |
+|---|---|---|---|
+| `addExpense.test.jsx` | 36 | `forms.test.jsx` | 14 |
+| `splits.test.js` | 32 | `invites.test.jsx` | 14 |
+| `settings.test.jsx` | 26 | `auth.test.js` | 13 |
+| `groupSettings.test.jsx` | 18 | `routeGuard.test.jsx` | 12 |
+| `balances.test.jsx` | 17 | `splitDefault.test.js` | 12 |
+| `createGroup.test.jsx` | 17 | `balancesLib.test.js` | 10 |
+| `createEvent.test.jsx` | 14 | `groups.test.js` | 10 |
+| `pageTitle.test.jsx` | 10 | `home.test.jsx` | 9 |
+| `groupExpenses.test.jsx` | 8 | `validators.test.js` | 8 |
+| `expenseValidators.test.js` | 7 | `expensesApi.test.js` | 6 |
+| `splitDefaultPanel.test.jsx` | 6 | `initials.test.js` | 3 |
+| | | **Total** | **302** |
+
+## 3.5 End-to-end walkthrough
+
+Two browsers, Alice and Bob, against the running app (backend `8c8498e`, frontend `e72a276`, seeded database):
+
+| Step | Result |
+|---|---|
+| 1. Alice creates "Road Trip" (Group outing) and invites bob@example.com | ✅ Lands on the group page as admin |
+| 2. Bob logs in and sees the invitation on Home | ✅ |
+| 3. Bob accepts | ✅ Group appears under Your groups without a reload |
+| 4. Alice creates the event "Gas stops" for all members | ✅ Listed on the group page |
+| 5. Alice adds "Gas", $63.25, even split with Bob | ✅ Preview shows $31.63 (+1¢) and $31.62 |
+| 6. Expense saved | ✅ "Expense 'Gas' saved: $63.25 shared by 2 people" |
+| 7. Alice opens Balances | ✅ "bob@example.com owes you +$31.62" |
+| 8. A guest opens `/balances`, `/groups/3` and an unknown URL | ✅ Sent to `/login` each time |
+
+## 3.6 Issues found
+
+| ID | Issue | Severity | Found by | Owner | Status |
+|---|---|---|---|---|---|
+| BUG-01 | PR #9 added migration `04994c4898a2` on top of an older migration, so there are two heads. `alembic upgrade head` fails on an empty database; `upgrade heads` fails with "column paid_by already exists". | Blocker | Migration run | Mick | Open, fix Nov 2 |
+| BUG-02 | PR #9 removed `created_at` from the Expense model, but `routes/expenses.py` still reads it. Creating an expense and listing a group's expenses raise `AttributeError` (500). | Blocker | `test_expense_integration::test_api_lists_expenses_and_balances` | Mick, Lukas | Open, fix Nov 2 |
+| BUG-03 | The seed adds 9 expenses and 24 splits but no balance rows, so Balances is empty for every demo account. The seed should save expenses through `expense_persistence`, as the API does. | Major | TC-DAT-02 | Mick | Open, It6 |
+| BUG-04 | `GET /users` needs no login and returns every user's id and email. | Major (security) | TC-SEC-02 | Lukas | Open, It6 |
+| BUG-05 | `get_member_balance()` in `memberships.py` still returns 0, so a member who owes money is removed with no warning. The unit tests stub a balance, so they pass. | Major | TC-GRP-10 | Lukas | Open, It6 |
+| BUG-06 | There is no `GET /groups`, so the group and event lists and each group's default split live in the browser. On a new device, Home says "You are not in any groups on this device yet", and a group page opened by link shows "Group" as its name. | Major | TC-GRP-15, TC-EXP-14 | Lukas, Cole | Open, It6 |
+| BUG-07 | Add Expense and `POST /expenses` have no category, which FR-EXP-01 requires and budgets need. | Major | TC-EXP-02 | Mick, Lukas, Cole | Open, It8 |
+| BUG-08 | No rate limiting on login (25 wrong passwords in a row, all 401). | Major | TC-SEC-03 | Lukas | Open, It9 |
+| BUG-09 | README is out of date: it lists `JWT_SECRET` (the app reads `EMAIL_VERIFICATION_SECRET`), calls expenses and balances "planned", shows an old project tree, and says sprints run Monday to Sunday. | Minor | Review | Xander | Open, It6 |
+
+## 3.7 Fixes and updates already verified
+
+| Change | When | Verified by |
+|---|---|---|
+| Server-side password rule (8 characters, a capital letter, a symbol) on register and password change | Oct 9, Lukas | TC-ACC-04 and 3 rejection tests |
+| Group type names aligned between database and app (`roommate`, `partner`, `family`, `outing`) | Migration `6e590a5f2830` | `test_all_valid_group_types` (4) |
+| Seed uses real password hashes, so demo logins work | Sprint 4 and 5, Mick | Logged in as all four seed accounts |
+| Expense save is all or nothing | Sprint 4, Lukas | `test_failed_balance_update_rolls_back_expense` |
+| Opposite debts net into one balance | Sprint 4, Lukas | `test_opposite_debts_are_netted` |
+
+## 3.8 Not yet tested
+
+Receipt upload and AI reading, review and assignment, receipt deletion, edit and delete expense, settle up, budgets, analysis, activity, admin, HTTPS, load, the manual screen reader pass, and the first-time-user check. Each has a planned test case in Section 2 and an iteration in the Project Plan.
+
+**Next run:** Iteration 6 close-out, Friday Nov 6, on the live server.
+
+---
+
+# 4 How to run the tests
+
+**Backend** (Postgres running and migrated; from `backend/` with the virtualenv active):
+
+```bash
+# One-time: create and migrate the database the integration tests use
+createdb -h localhost -U postgres shared_expense_sprint4_test
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/shared_expense_sprint4_test alembic upgrade head
+
+python -m pytest -q
+```
+
+**Frontend** (no database needed; from `frontend/`):
+
+```bash
+npm install
+npm test
+```
+
+A run is green only when both commands finish with zero failures.
