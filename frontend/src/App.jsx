@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
@@ -10,7 +11,13 @@ import GroupSettingsPage from './pages/GroupSettingsPage.jsx';
 import CreateEventPage from './pages/CreateEventPage.jsx';
 import AddExpensePage from './pages/AddExpensePage.jsx';
 import BalancesPage from './pages/BalancesPage.jsx';
+import ReceiptUploadPage from './pages/ReceiptUploadPage.jsx';
+import ReceiptStatusPage from './pages/ReceiptStatusPage.jsx';
+import ReceiptReviewPlaceholderPage from './pages/ReceiptReviewPlaceholderPage.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
+
+// Preview page with sample data. Dev only, not in the production build.
+const DevReceiptPreview = import.meta.env.DEV ? lazy(() => import('./pages/DevReceiptPreview.jsx')) : null;
 
 // Maps each URL to its page. Unknown URLs go to the login page.
 export default function App() {
@@ -30,6 +37,12 @@ export default function App() {
         <Route path="/expenses/new" element={<AddExpensePage />} />
         <Route path="/groups/:groupId/expenses/new" element={<AddExpensePage />} />
         <Route path="/balances" element={<BalancesPage />} />
+        <Route path="/receipts/new" element={<ReceiptUploadPage />} />
+        <Route path="/receipts/:receiptId" element={<ReceiptStatusPage />} />
+        <Route path="/receipts/:receiptId/review" element={<ReceiptReviewPlaceholderPage />} />
+        {DevReceiptPreview && (
+          <Route path="/dev/receipt-preview" element={<Suspense fallback={null}><DevReceiptPreview /></Suspense>} />
+        )}
       </Route>
       {/* replace: keeps the unknown URL out of the browser history so Back does not return to it. */}
       <Route path="*" element={<Navigate to="/login" replace />} />

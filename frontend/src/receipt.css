@@ -1,0 +1,128 @@
+/* Receipt screens. Mockup styles in dark colors, only inside .rcpt so nothing else changes. */
+
+.rcpt, .rc-dlg-scope {
+  --sf: #151c22; --ink: #e3e8ec; --mute: rgba(227, 232, 236, .74); --line: #2b363f; --soft: #1c252c;
+  --pri: #3bb4b0; --prih: #5cc7c3; --onpri: #06201f; --prisoft: #12302f; --priink: #7fd6d2;
+  --ok: #5fd08a; --oksoft: #15301f; --bad: #ff8a80; --badsoft: #3a1d1b;
+}
+.rcpt p { margin: 0; }
+.rcpt .mute, .rc-dlg-scope .mute { color: var(--mute); }
+.rcpt .sm, .rc-dlg-scope .sm { font-size: .875rem; }
+.rcpt .money { font-variant-numeric: tabular-nums; font-weight: 700; }
+.rcpt .ic, .rc-dlg-scope .ic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Page header: title and the "How to add" switch */
+.rc-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.rcpt .seg a, .rcpt .seg span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: transparent; color: var(--mute); font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.rcpt .seg a:hover { color: var(--ink); }
+.rcpt .seg .on { background: var(--sf); color: var(--ink); box-shadow: 0 0 0 2px var(--pri); }
+
+/* Steps */
+.rcpt .steps { display: flex; flex-wrap: wrap; gap: 8px 12px; list-style: none; margin: 0; padding: 0; }
+.rcpt .steps li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--sf); font-weight: 600; white-space: nowrap; }
+.rcpt .steps .n { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; background: var(--soft); color: var(--mute); font-size: .875rem; font-weight: 700; }
+.rcpt .steps .done .n { background: var(--ok); color: var(--sf); }
+.rcpt .steps .now { border-color: var(--pri); box-shadow: 0 0 0 1px var(--pri); }
+.rcpt .steps .now .n { background: var(--pri); color: var(--onpri); }
+
+/* Two cards side by side, stacked when narrow */
+.rc-cols { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.rc-cols > .panel { flex: 1 1 400px; min-width: 0; }
+
+/* Choose your receipt */
+.rcpt .pick { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+.rcpt .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+.rcpt .how h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 1rem; line-height: 1.3; font-weight: 700; }
+.rcpt .how h3 .ic { color: var(--pri); }
+.rcpt .sl { list-style: none; margin: 0; padding: 0; }
+.rcpt .sl li { position: relative; padding: 0 0 18px 44px; }
+.rcpt .sl li:last-child { padding-bottom: 0; }
+.rcpt .sl li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 34px; bottom: 4px; width: 2px; background: var(--line); }
+.rcpt .sl .sn { position: absolute; left: 0; top: 0; display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--pri); color: var(--onpri); font-weight: 700; }
+.rcpt .sl .st { display: flex; align-items: center; min-height: 30px; font-weight: 700; }
+.rcpt .sl .sd { margin-top: 2px; }
+
+/* Upload status */
+.rcpt .okcircle { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ok); color: var(--sf); }
+.rcpt .okcircle .ic { width: 22px; height: 22px; stroke-width: 3; }
+.rcpt .badcircle { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--bad); color: var(--sf); }
+.rcpt .badcircle .ic { width: 22px; height: 22px; stroke-width: 3; }
+.rcpt .idlecircle { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line); }
+.rcpt .srow { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.rcpt .srow:first-of-type { border-top: 0; padding-top: 0; }
+.rcpt .srow-body { flex: 1 1 auto; min-width: 0; }
+.rcpt .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; }
+.rcpt .kv dt { color: var(--mute); }
+.rcpt .kv dd { margin: 0; font-weight: 600; min-width: 0; }
+
+/* Progress ring (upload percent) */
+.rc-ring { flex: none; width: 36px; height: 36px; transform: rotate(-90deg); }
+.rc-ring circle { fill: none; stroke-width: 4; }
+.rc-ring .track { stroke: var(--line); }
+.rc-ring .bar { stroke: var(--pri); stroke-linecap: round; transition: stroke-dashoffset .2s linear; }
+
+/* Small text with an ellipsis and a caret for the rest */
+.rc-expand { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.rc-expand > p { flex: 1 1 auto; min-width: 0; }
+.rc-expand > p.is-clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-expand > p.is-open { overflow-wrap: anywhere; }
+.rc-caret { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -10px -10px -10px 0; border: 0; border-radius: 8px; background: transparent; color: var(--mute); cursor: pointer; }
+.rc-caret:hover { background: var(--soft); color: var(--ink); }
+.rc-caret .ic { width: 18px; height: 18px; transition: transform .15s; }
+.rc-caret[aria-expanded="true"] .ic { transform: rotate(180deg); }
+
+.rcpt .title-ok { font-weight: 700; color: var(--ok); }
+.rcpt .title-bad { font-weight: 700; color: var(--bad); }
+.rcpt .title-bad:focus { outline: none; }
+.rcpt .title-bad:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.rcpt .status-note:focus { outline: none; }
+
+/* Home: the two ways to add an expense */
+.rc-paths { display: flex; flex-wrap: wrap; gap: 16px; }
+.rc-path { display: flex; flex: 1 1 260px; align-items: center; gap: 14px; min-height: 88px; padding: 16px 18px; border: 1px solid #2b363f; border-radius: 12px; background: #151c22; color: #e3e8ec; text-decoration: none; font: inherit; text-align: left; cursor: pointer; }
+.rc-path:hover { border-color: #3bb4b0; color: #e3e8ec; }
+.rc-path.pri { background: color-mix(in srgb, #e3e8ec 8%, transparent); border-color: #3bb4b0; }
+.rc-path .t { display: block; font-weight: 700; }
+.rc-path .d { font-size: .875rem; }
+.rc-path .d.mute { color: rgba(227, 232, 236, .74); }
+.rc-path .ic { width: 28px; height: 28px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-ring .bar, .rc-caret .ic { transition: none; }
+}
+@media (max-width: 420px) {
+  .rcpt .pick, .rc-cols > .panel { padding: 18px; }
+  .rcpt .steps { gap: 8px; }
+  /* Two buttons on one row on phones */
+  .rcpt .btn-row { gap: 10px; }
+  .rcpt .btn-row .btn:not(:only-child) { flex: 1 1 auto; padding-inline: 8px; font-size: .9375rem; }
+  .rcpt .steps li { padding: 0 12px 0 6px; gap: 8px; font-size: .9375rem; }
+}
+.rcpt .btn, .rc-dlg-scope .btn { display: inline-flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; }
+/* Same width for 'Add an expense' and 'Your groups' */
+.rc-col { max-width: 748px; }
+/* Home only: center the column like the mockup */
+.rc-home > * { width: 100%; max-width: 748px; margin-inline: auto; }
+/* Reading spinner */
+.rc-spin { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--pri); animation: rc-turn .9s linear infinite; }
+@keyframes rc-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .rc-spin { animation: none; }
+}
+.rcpt .timer { font-variant-numeric: tabular-nums; }
+
+/* Phones: the four steps become one pill on one line. No numbers, current step has the teal ring, done is green. */
+@media (max-width: 480px) {
+  .rcpt .steps { flex-wrap: nowrap; gap: 0; padding: 3px; border: 1px solid var(--line); border-radius: 999px; background: var(--sf); }
+  .rcpt .steps li { flex: 1 1 auto; justify-content: center; min-height: 40px; padding: 0 6px; gap: 0; border: 0; border-radius: 999px; background: transparent; box-shadow: none; color: var(--mute); font-size: .8125rem; }
+  .rcpt .steps .n { display: none; }
+  .rcpt .steps .done { color: var(--ok); }
+  .rcpt .steps .now { color: var(--ink); background: var(--soft); box-shadow: 0 0 0 2px var(--pri); }
+  /* Thin grey line between steps, but not next to the current one */
+  .rcpt .steps li { position: relative; }
+  .rcpt .steps li:not(.now) + li:not(.now)::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 1px; background: rgba(227, 232, 236, .3); }
+  .rcpt .steps .done .sm { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+@media (max-width: 359px) {
+  .rcpt .steps li { padding: 0 4px; font-size: .6875rem; }
+}
