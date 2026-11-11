@@ -1,5 +1,7 @@
 """Receipt upload route tests. No real database or AI service required."""
 
+from datetime import date
+from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,6 +17,15 @@ from app.api.dependencies import get_current_user
 from app.api.routes import receipts
 from app.db.session import get_db
 from app.main import app
+from models import Receipt
+
+# Upload error codes. A failed read must not use any of these (FR-EXP-17).
+UPLOAD_ERROR_CODES = (
+    "upload_failed",
+    "wrong_format",
+    "file_too_large",
+    "corrupt_file",
+)
 
 
 @pytest.fixture
@@ -66,6 +77,7 @@ def send_upload(client, data, name="receipt.jpg", mime="image/jpeg", group_id="1
     )
 
 
+# A good JPEG or PDF is accepted, stored privately, and left at status uploaded (FR-EXP-10).
 @pytest.mark.parametrize("format_name,mime,fixture_name", [
     ("scan.jpeg", "image/jpeg", "sample_jpeg"),
     ("scan.pdf", "application/pdf", "sample_pdf"),
@@ -95,33 +107,91 @@ def test_valid_upload_creates_private_file_and_uploaded_row(
     assert Path(saved.file_path).stat().st_mode & 0o077 == 0  # private permissions
 
 
-@pytest.mark.parametrize("name,mime,data,code,status_code", [
-    ("file.txt", "text/plain", b"receipt text", "wrong_format", 415),
-    ("photo.png", "image/png", b"\x89PNG\r\n", "wrong_format", 415),
-    ("image.jpg", "image/jpeg", b"broken jpeg", "corrupt_file", 422),
-    ("file.pdf", "application/pdf", b"%PDF-not-a-real-pdf", "corrupt_file", 422),
-    ("image.jpg", "application/pdf", b"fake", "wrong_format", 415),
-    ("empty.jpg", "image/jpeg", b"", "corrupt_file", 422),
+# The wrong type, a corrupt file, and an empty file are refused with that cause (FR-EXP-16).
+@pytest.mark.parametrize("name,mime,data,code,status_code,message", [
+    (
+        "file.txt",
+        "text/plain",
+        b"receipt text",
+        "wrong_format",
+        415,
+        "Only JPEG and PDF receipts are supported.",
+    ),
+    (
+        "photo.png",
+        "image/png",
+        b"\x89PNG\r\n",
+        "wrong_format",
+        415,
+        "Only JPEG and PDF receipts are supported.",
+    ),
+    (
+        "image.jpg",
+        "image/jpeg",
+        b"broken jpeg",
+        "corrupt_file",
+        422,
+        "This is not a valid JPEG image.",
+    ),
+    (
+        "notes.pdf",
+        "application/pdf",
+        b"not-a-pdf",
+        "corrupt_file",
+        422,
+        "This is not a valid PDF.",
+    ),
+    (
+        "file.pdf",
+        "application/pdf",
+        b"%PDF-not-a-real-pdf",
+        "corrupt_file",
+        422,
+        "The PDF could not be read or is password protected.",
+    ),
+    (
+        "image.jpg",
+        "application/pdf",
+        b"fake",
+        "wrong_format",
+        415,
+        "The file's reported type does not match its extension.",
+    ),
+    (
+        "empty.jpg",
+        "image/jpeg",
+        b"",
+        "corrupt_file",
+        422,
+        "The uploaded file is empty.",
+    ),
 ])
 def test_invalid_upload_reports_cause_and_action(
-    receipt_client, name, mime, data, code, status_code,
+    receipt_client, name, mime, data, code, status_code, message,
 ):
     response = send_upload(receipt_client["client"], data, name, mime)
     assert response.status_code == status_code, response.text
-    assert response.json()["detail"]["code"] == code
-    assert response.json()["detail"]["action"]
+    detail = response.json()["detail"]
+    assert detail["code"] == code
+    assert detail["message"] == message
+    assert detail["action"]
     receipt_client["db"].add.assert_not_called()
     assert not receipt_client["storage"].exists()
 
 
+# A file over the size limit is refused before anything is saved (FR-EXP-16).
 def test_oversize_file_is_rejected_before_persisting(receipt_client, monkeypatch):
     monkeypatch.setattr(receipts, "MAX_RECEIPT_BYTES", 25)
     response = send_upload(receipt_client["client"], b"X" * 26)
     assert response.status_code == 413
-    assert response.json()["detail"]["code"] == "file_too_large"
+    detail = response.json()["detail"]
+    assert detail["code"] == "file_too_large"
+    assert detail["message"] == "The receipt exceeds the upload size limit."
+    assert detail["action"]
     receipt_client["db"].add.assert_not_called()
 
 
+# Someone who is not in the group cannot upload a receipt.
 def test_not_group_member_cannot_upload(receipt_client, monkeypatch, sample_jpeg):
     def forbidden(*args):
         raise HTTPException(status_code=403, detail="Not a group member")
@@ -131,6 +201,7 @@ def test_not_group_member_cannot_upload(receipt_client, monkeypatch, sample_jpeg
     receipt_client["db"].add.assert_not_called()
 
 
+# An upload with no session is rejected and nothing is saved.
 def test_unauthenticated_upload_is_rejected(receipt_client, sample_jpeg):
     # Remove the authentication override while retaining the fake DB.
     app.dependency_overrides.pop(get_current_user)
@@ -139,20 +210,19 @@ def test_unauthenticated_upload_is_rejected(receipt_client, sample_jpeg):
     receipt_client["db"].add.assert_not_called()
 
 
+# A database failure is an upload failure, and the file that was just written is removed.
 def test_failed_database_commit_removes_saved_file(receipt_client, sample_jpeg):
     receipt_client["db"].commit.side_effect = RuntimeError("test DB outage")
     response = send_upload(receipt_client["client"], sample_jpeg)
     assert response.status_code == 500
-    assert response.json()["detail"]["code"] == "upload_failed"
+    detail = response.json()["detail"]
+    assert detail["code"] == "upload_failed"
+    assert detail["message"] == "The receipt could not be saved."
     receipt_client["db"].rollback.assert_called_once()
     assert list(receipt_client["storage"].glob("*")) == []
 
 
-# Phase 2: receipt polling and private item details.
-from datetime import date
-from decimal import Decimal
-
-from models import Receipt
+# Receipt status after the file has been stored.
 
 
 @pytest.fixture
@@ -169,6 +239,7 @@ def receipt_detail_client(receipt_client):
     return {**receipt_client, "receipt": receipt}
 
 
+# A receipt that has only been uploaded has no items and does not expose the file path.
 def test_get_receipt_uploaded_returns_empty_items_without_file_path(receipt_detail_client):
     response = receipt_detail_client["client"].get("/receipts/321")
     assert response.status_code == 200, response.text
@@ -180,6 +251,7 @@ def test_get_receipt_uploaded_returns_empty_items_without_file_path(receipt_deta
     assert receipt_detail_client["seen_groups"] == [(17, 11)]
 
 
+# A receipt the reader finished returns the line items in order.
 def test_get_receipt_read_returns_ordered_items(receipt_detail_client):
     receipt_detail_client["receipt"].status = "read"
     receipt_detail_client["receipt"].store = "Grocery Market"
@@ -202,6 +274,7 @@ def test_get_receipt_read_returns_ordered_items(receipt_detail_client):
     ]
 
 
+# Reading in progress and a failed read are statuses on the receipt, not upload errors.
 @pytest.mark.parametrize("state", ["reading", "failed"])
 def test_get_receipt_processing_states(receipt_detail_client, state):
     receipt_detail_client["receipt"].status = state
@@ -211,12 +284,27 @@ def test_get_receipt_processing_states(receipt_detail_client, state):
     assert response.json()["items"] == []
 
 
+# A failed read is its own state. It is not an upload rejection (FR-EXP-17).
+def test_reading_failure_is_its_own_state(receipt_detail_client):
+    receipt_detail_client["receipt"].status = "failed"
+    response = receipt_detail_client["client"].get("/receipts/321")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["items"] == []
+    assert "detail" not in body
+    for code in UPLOAD_ERROR_CODES:
+        assert code not in response.text
+
+
+# An unknown receipt id is a not-found response, and membership is not checked.
 def test_get_missing_receipt_returns_404(receipt_detail_client):
     response = receipt_detail_client["client"].get("/receipts/999")
     assert response.status_code == 404
     assert receipt_detail_client["seen_groups"] == []
 
 
+# A person who is not in the group cannot read the receipt status.
 def test_get_receipt_requires_accepted_group_membership(receipt_detail_client, monkeypatch):
     def forbidden(*args):
         raise HTTPException(status_code=403, detail="Not a group member")
@@ -226,6 +314,7 @@ def test_get_receipt_requires_accepted_group_membership(receipt_detail_client, m
     receipt_detail_client["db"].query.assert_not_called()
 
 
+# Reading a receipt status with no session is rejected.
 def test_get_receipt_requires_authentication(receipt_detail_client):
     app.dependency_overrides.pop(get_current_user)
     response = receipt_detail_client["client"].get("/receipts/321")

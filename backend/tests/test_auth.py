@@ -110,6 +110,34 @@ def test_invalid_registration_returns_422(client):
     assert response.status_code == 422
 
 
+# Registration rejects a password with no capital letter (FR-ACC-03).
+def test_registration_rejects_password_without_capital(client):
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": TEST_EMAIL,
+            "password": "abcdefg!",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Password must contain at least one capital letter." in response.text
+
+
+# Registration rejects a password with no symbol (FR-ACC-03).
+def test_registration_rejects_password_without_symbol(client):
+    response = client.post(
+        "/auth/register",
+        json={
+            "email": TEST_EMAIL,
+            "password": "Abcdefgh",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Password must contain at least one symbol." in response.text
+
+
 def test_bad_login_returns_401(client):
     register_test_user(client)
 

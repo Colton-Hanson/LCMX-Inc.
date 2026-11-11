@@ -66,14 +66,22 @@ That only runs against an empty `shared_expense_dev` database. It inserts four a
 
 Alice administers Apartment 4B (roommate). Bob and Carol are accepted members. Dave has a pending invitation there and a declined invitation to Lake Weekend (outing, administered by Bob). Lake Weekend also has an event named Lake Cabin for Alice, Bob, and Carol. Run seed once. A second run stops because those emails already exist.
 
-**Environment variables.** Copy `backend/.env.example` to `backend/.env`. The app currently only reads two values:
+**Environment variables.** Copy `backend/.env.example` to `backend/.env`. The database URL is required. Receipt upload also reads two optional values:
 
 ```text
 DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/shared_expense_dev
 JWT_SECRET=<output of: python -c "import secrets; print(secrets.token_hex(32))">
+RECEIPT_UPLOAD_DIR=backend/uploads/receipts
+MAX_RECEIPT_MB=10
 ```
 
-`.env` is git-ignored. Don't commit a real secret. That's not a suggestion, it's NFR-SEC-06.
+`.env` is git-ignored. Don't commit a real secret. That's not a suggestion, it's NFR-SEC-06. You can leave `RECEIPT_UPLOAD_DIR` and `MAX_RECEIPT_MB` out of `.env`. The lines above are the defaults.
+
+**Receipt upload.** A signed-in group member sends a JPEG or PDF to `POST /receipts` with form fields `group_id` and `file`. A good file is stored and the receipt row is created with status `uploaded`. The wrong type, a file over the size limit, and a corrupt or empty file are refused with a cause and a next step. Nothing is saved in those cases.
+
+`RECEIPT_UPLOAD_DIR` is where those files go. If it is unset, the default is `backend/uploads/receipts`. The directory is created so only the server user can open it, and each file is private too. `MAX_RECEIPT_MB` is the size limit in megabytes. It defaults to 10.
+
+**AI.** The upload route does not read an API key, a model name, or any other AI setting. There is nothing to put in `.env` for the reader yet. A receipt stays at `uploaded` until that step exists. When reading fails later, the status is `failed`. That is a different outcome from an upload rejection.
 
 A note on `db_starter/`: that folder is Mick's schema notes and early migration drafts, not the startup path. It uses a different port and password than the Docker database above. Run the app from `backend/` as described, treat `db_starter/` as reference, not instructions.
 
@@ -211,7 +219,7 @@ curl -s -b ada.cookies -X DELETE http://localhost:8000/groups/GROUP_ID/members/A
 │   │   ├── schemas/        # request/response schemas
 │   │   └── main.py
 │   ├── alembic/
-│   │   └── versions/       # through 5f237ae3e79f (events and event_members)
+│   │   └── versions/       # through 460471bcd085 (group id on receipts)
 │   ├── tests/
 │   ├── models.py
 │   ├── requirements.txt
@@ -232,6 +240,8 @@ curl -s -b ada.cookies -X DELETE http://localhost:8000/groups/GROUP_ID/members/A
 
 
 **Tests.** From `backend`, with the virtualenv active and Postgres migrated: `pytest`. That suite includes creating a group, inviting then accepting or declining, the three removal cases (zero balance, outstanding balance, sole administrator), and an event with zero members. From `frontend`: `npm test`. The frontend tests do not need the database. The backend tests do.
+
+The Charter and NFR-QUA-01 name unittest (PyUnit). This repo uses pytest for the backend and Vitest for the frontend. That is the recorded exception for OI-26. pytest can still run unittest-style tests, so a test written for PyUnit is not lost.
 
 **Workflow.** Backlog lives in JIRA, seeded from the Requirements Spec, every story tagged with a requirement ID, an owner, and an hour estimate. Sprints run Monday to Sunday, one week each. Done means merged, tested, reviewed by someone who isn't you, and runnable from this README with no secret manual steps you forgot to write down. Full regression suite runs at every sprint close, not just at the end of the semester when it's too late to fix anything.
 
