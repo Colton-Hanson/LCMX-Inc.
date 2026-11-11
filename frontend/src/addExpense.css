@@ -93,3 +93,19 @@
 .split-bar.is-over > span { background: var(--error); }
 .split-summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 8px 0 0; font-size: 0.9375rem; }
 .split-summary .is-bad { color: var(--warn); font-weight: 600; }
+
+/* Wide layout like the mockup: expense on the left, split on the right. One column on phones. */
+.add-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.how-seg a, .how-seg span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 8px; color: var(--text-muted); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.how-seg a:hover { color: var(--text); }
+.how-seg .on { background: var(--surface); color: var(--text); box-shadow: 0 0 0 2px var(--teal); }
+
+.add-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.add-form { display: contents; }
+.add-grid .panel { min-width: 0; }
+@media (min-width: 900px) {
+  .add-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+  .add-group { grid-column: 1; grid-row: 1; }
+  .add-expense { grid-column: 1; grid-row: 2; }
+  .add-split { grid-column: 2; grid-row: 1 / span 2; }
+}

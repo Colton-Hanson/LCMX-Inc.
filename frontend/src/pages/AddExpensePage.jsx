@@ -82,16 +82,22 @@ function AddExpense({ urlGroupId }) {
   }
 
   return (
-    <main className="page-wrap page-wrap--narrow">
+    <main className="page-wrap">
       <div>
         <Link className="back-link" to={`/groups/${group.id}`} state={{ group }}>
           ← {group.name}
         </Link>
-        <h1>Add expense</h1>
-        <p className="text-body-secondary mt-1 mb-0">Enter what was spent and how it is shared.</p>
+        <div className="add-top">
+          <h1>Add expense</h1>
+          <div className="seg how-seg" role="group" aria-label="How to add">
+            <span className="on" aria-current="page">Enter by hand</span>
+            <Link to={`/receipts/new?group=${group.id}`}>Scan a receipt</Link>
+          </div>
+        </div>
       </div>
 
-      <div className="panel">
+      <div className="add-grid">
+      <div className="panel add-group">
         <div className="field">
           <label htmlFor={groupFieldId} className="form-label fw-semibold">Group</label>
           <select
@@ -116,6 +122,7 @@ function AddExpense({ urlGroupId }) {
         totalText={totalText}
         setTotalText={setTotalText}
       />
+      </div>
     </main>
   );
 }
@@ -245,7 +252,9 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
   const noneAreInvalid = split.invalidIds.length === 0; // true when every typed number can be read
 
   return (
-    <form className="panel" onSubmit={handleSubmit} noValidate aria-label="Add expense" ref={formRef}>
+    <form className="add-form" onSubmit={handleSubmit} noValidate aria-label="Add expense" ref={formRef}>
+      <section className="panel add-expense" aria-labelledby="expense-title">
+      <h2 id="expense-title">The expense</h2>
       <TextField
         label="Title"
         value={title}
@@ -316,8 +325,15 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
             )}
           </fieldset>
 
-          <fieldset className="plain">
-            <legend>How to split it</legend>
+        </>
+      )}
+      </section>
+
+      <section className="panel add-split" aria-labelledby="split-title">
+      <h2 id="split-title">How to split it</h2>
+      {status === 'ready' && (
+        <>
+          <div className="plain">
             <div className="seg split-seg" role="group" aria-label="Split method">
               {METHODS.map((m) => (
                 <button
@@ -431,9 +447,10 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
                 </p>
               </div>
             )}
-          </fieldset>
+          </div>
         </>
       )}
+      {status !== 'ready' && <p className="text-body-secondary mb-0">The split shows up once the members have loaded.</p>}
 
       {splitBlocked && !split.valid && (
         <Message kind="error" alert>Can’t save yet. {split.message}</Message>
@@ -446,6 +463,7 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
         </button>
         <Link className="btn btn-ghost" to={`/groups/${groupId}`} state={{ group }}>Cancel</Link>
       </div>
+      </section>
     </form>
   );
 }
