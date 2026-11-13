@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     ForeignKey,
     PrimaryKeyConstraint,
+    UniqueConstraint,
     Numeric,
     DateTime,
     Boolean,
@@ -266,12 +267,15 @@ class ItemAssignment(Base):
     __tablename__ = "item_assignments"
 
     id = Column(BigInteger, autoincrement=True)
-    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, unique=True)
-    receipt_item_id = Column(BigInteger, ForeignKey("items.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    receipt_item_id = Column(BigInteger, ForeignKey("items.id", ondelete="CASCADE"), nullable=False)
     share = Column(Numeric(10,2), nullable=False)
 
-    __table_args__ = (PrimaryKeyConstraint("id", "user_id", "receipt_item_id"),
-                      CheckConstraint("share > 0"),)
+    __table_args__ = (
+        PrimaryKeyConstraint("id", "user_id", "receipt_item_id"),
+        UniqueConstraint("receipt_item_id", "user_id", name="uq_item_assignments_item_user"),
+        CheckConstraint("share > 0"),
+    )
 
 
 # class EventSplit(Base):
@@ -398,7 +402,7 @@ class Receipt(Base):
     group_id = Column(BigInteger, ForeignKey("groups.id"), nullable=False)
     uploader = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     expense_id = Column(BigInteger, ForeignKey("expenses.id"), nullable=True)
-    file_path = Column(String(1024), nullable=False)
+    file_path = Column(String(1024), nullable=True)
     file_type = Column(String(16), nullable=False)
     size = Column(BigInteger, nullable=False)
     status = Column(String(255), nullable=False)
@@ -412,7 +416,7 @@ class Receipt(Base):
         name="ck_receipts_file_type",
     ),
     CheckConstraint(
-        "status IN ('uploaded', 'reading', 'read', 'failed', 'abandoned')",
+        "status IN ('uploaded', 'reading', 'read', 'failed', 'abandoned', 'confirmed')",
         name="ck_receipts_status",
     ),
         Index("idx_confirmed_created_at", "status", "receipt_date"),
