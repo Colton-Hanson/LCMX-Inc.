@@ -26,6 +26,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
+    Index,
 )
 
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP
@@ -143,15 +144,15 @@ class Event(Base):
     )
 
     name = Column(String(100), nullable=False)
-    paid = Column(Boolean, server_default = 'false')
-    category = Column(String(20), nullable = True)
+    # (retired) paid = Column(Boolean, server_default = 'false')
+    # (retired) category = Column(String(20), nullable = True)
 
-    __table_args__ = (
-        CheckConstraint(
-            "category IN ('food', 'rent', 'entertainment', 'other')",
-            name="ck_events_category",
-        ),
-    )
+    # __table_args__ = (
+    #     CheckConstraint(
+    #         "category IN ('food', 'rent', 'entertainment', 'other')",
+    #         name="ck_events_category",
+    #     ),
+    # )
 
 
 class EventMember(Base):
@@ -193,6 +194,7 @@ class Expense(Base):
     paid = Column(Boolean, server_default="false", nullable=False)
     category = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+    event_id = Column(BigInteger, ForeignKey("events.id"), nullable=True)
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="ck_expenses_amount_positive"),
@@ -207,6 +209,18 @@ class Budget(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     group_id = Column(BigInteger, ForeignKey("groups.id"), nullable=False)
+
+
+class Settlement(Base):
+    __tablename__ = "settlements"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    group_id = Column(BigInteger, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
+    paid_by = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    recipient = Column(BigInteger, ForeignKey("users.id"), nullable=False)
+    amount = Column(Numeric(10,2), nullable=False)
+    recorded_by = Column(BigInteger, ForeignKey("users.id"), nullable=True)
+    settlement_time = Column(DateTime, nullable=False)
 
 
 # === Items (NOT in original draft — inferred placeholder, see note above) ===
@@ -248,22 +262,25 @@ class ExpenseSplit(Base):
     __table_args__ = (PrimaryKeyConstraint("expense_id", "split_id"),)
 
 
-class ItemSplit(Base):
-    __tablename__ = "item_splits"
+class ItemAssignment(Base):
+    __tablename__ = "item_assignments"
 
-    item_id = Column(BigInteger, ForeignKey("items.id"), nullable=False)
-    split_id = Column(BigInteger, ForeignKey("splits.id"), nullable=False)
+    id = Column(BigInteger, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, unique=True)
+    receipt_item_id = Column(BigInteger, ForeignKey("items.id", ondelete="CASCADE"), nullable=False, unique=True)
+    share = Column(Numeric(10,2), nullable=False)
 
-    __table_args__ = (PrimaryKeyConstraint("item_id", "split_id"),)
+    __table_args__ = (PrimaryKeyConstraint("id", "user_id", "receipt_item_id"),
+                      CheckConstraint("share > 0"),)
 
 
-class EventSplit(Base):
-    __tablename__ = "event_splits"
+# class EventSplit(Base):
+#     __tablename__ = "event_splits"
 
-    event_id = Column(BigInteger, ForeignKey("events.id"), nullable=False)
-    split_id = Column(BigInteger, ForeignKey("splits.id"), nullable=False)
+#     event_id = Column(BigInteger, ForeignKey("events.id"), nullable=False)
+#     split_id = Column(BigInteger, ForeignKey("splits.id"), nullable=False)
 
-    __table_args__ = (PrimaryKeyConstraint("event_id", "split_id"),)
+#     __table_args__ = (PrimaryKeyConstraint("event_id", "split_id"),)
 
 
 # === Objects w/ multiple parts ===
@@ -395,9 +412,10 @@ class Receipt(Base):
         name="ck_receipts_file_type",
     ),
     CheckConstraint(
-        "status IN ('uploaded', 'reading', 'read', 'failed')",
+        "status IN ('uploaded', 'reading', 'read', 'failed', 'abandoned')",
         name="ck_receipts_status",
     ),
+        Index("idx_confirmed_created_at", "status", "receipt_date"),
     )
 
 class Receipt_Item(Base):
