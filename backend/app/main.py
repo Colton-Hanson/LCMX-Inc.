@@ -37,3 +37,5 @@ def root():
         "message": "Shared Expense Management API"
     }
 
+from app.api.routes import settlements
+app.include_router(settlements.router)
