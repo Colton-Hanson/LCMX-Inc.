@@ -896,7 +896,7 @@ Use cases UC-07, UC-09 and UC-10.
 
 ## 5 Receipts and AI reading
 
-Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11). The AI reader is not chosen yet, so every receipt stays at status `uploaded` until that step is built.
+Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11). The team chose a small Qwen vision model as the AI reader, and it is being connected. Until it lands, every receipt on `main` stays at status `uploaded`.
 
 ### TC-RCP-01: Upload a JPEG photo or a PDF
 
@@ -944,7 +944,7 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Actions | 1. Run the reading step with a recorded reply.<br>2. Send `GET /receipts/{id}`.<br>3. Open the reading screen. |
 | Expected Results | The status moves from `uploaded` to `reading` to `read`. The reply is checked as valid JSON before saving. Store, date and items are saved and shown in the order they appear on the receipt. |
 | Covered by | `test_receipts::test_get_receipt_read_returns_ordered_items`, `test_get_receipt_processing_states`; planned pytest with recorded replies |
-| Status | ⏳ The AI reader is not chosen and the reading step is not built. The status route and its tests are merged. |
+| Status | ⏳ The reader (a small Qwen model) is chosen but not connected yet (SCRUM-133). The status route and its tests are merged. |
 
 ### TC-RCP-04: AI cannot read it
 
@@ -976,7 +976,7 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Actions | 1. Upload each receipt.<br>2. Compare the store, date, items and prices to the answer key.<br>3. Record the accuracy for each condition. |
 | Expected Results | Accuracy for each condition is logged in the Test Reports and meets the NFR-PER-02 target. |
 | Covered by | Manual |
-| Status | ⏳ Waits for the AI reader (was Iteration 6). |
+| Status | ⏳ Waits for the reader to be connected (was Iteration 6). |
 
 ### TC-RCP-06: Review and assign items
 
