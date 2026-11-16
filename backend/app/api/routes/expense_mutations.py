@@ -135,6 +135,7 @@ def update_expense(
         expense.name = payload.description
         expense.amount = payload.amount
         expense.paid_by = payload.paid_by
+        expense.event_id = payload.event_id
         _save_new_splits(expense, validated["shares"], db)
         db.commit()
         db.refresh(expense)
