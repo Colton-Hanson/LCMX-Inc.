@@ -33,6 +33,7 @@ class ExpenseUpdateResult(BaseModel):
     description: str
     amount: Decimal
     paid_by: int
+    event_id: int | None
     shares: dict[int, Decimal]
     rounding_adjusted_member_ids: list[int]
 
@@ -145,6 +146,7 @@ def update_expense(
             description=expense.name,
             amount=expense.amount,
             paid_by=expense.paid_by,
+            event_id=expense.event_id,
             shares=validated["shares"],
             rounding_adjusted_member_ids=validated["rounding_adjusted_member_ids"],
         )

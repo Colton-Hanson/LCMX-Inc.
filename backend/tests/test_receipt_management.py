@@ -148,3 +148,47 @@ def test_attachment_rejects_expense_already_linked(scenario):
 def test_auth_required():
     assert TestClient(app).delete('/receipts/1/picture').status_code == 401
     assert TestClient(app).post('/receipts/1/attach', json={'expense_id':1}).status_code == 401
+
+
+def test_member_can_view_private_picture(scenario):
+    s = scenario
+    app.dependency_overrides[get_current_user] = lambda: s["other"]
+    response = TestClient(app).get(f'/receipts/{s["receipt"].id}/picture')
+    assert response.status_code == 200, response.text
+    assert response.content == b"a picture"
+    assert response.headers["content-type"].startswith("image/jpeg")
+    assert "no-store" in response.headers["cache-control"]
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert "inline" in response.headers["content-disposition"]
+
+
+def test_nonmember_cannot_fetch_picture(scenario):
+    s = scenario
+    app.dependency_overrides[get_current_user] = lambda: s["outsider"]
+    assert TestClient(app).get(f'/receipts/{s["receipt"].id}/picture').status_code == 403
+
+
+def test_removed_picture_is_no_longer_accessible(scenario):
+    s = scenario
+    path = f'/receipts/{s["receipt"].id}/picture'
+    assert TestClient(app).get(path).status_code == 200
+    assert TestClient(app).delete(path).status_code == 200
+    assert TestClient(app).get(path).status_code == 404
+
+
+def test_cannot_fetch_arbitrary_files_outside_upload_dir(scenario, tmp_path):
+    s = scenario
+    outside = tmp_path.parent / f"outside-{uuid4().hex}.jpg"
+    outside.write_bytes(b"private data")
+    try:
+        s["receipt"].file_path = str(outside)
+        s["db"].commit()
+        response = TestClient(app).get(f'/receipts/{s["receipt"].id}/picture')
+        assert response.status_code == 409
+        assert response.content != b"private data"
+    finally:
+        outside.unlink(missing_ok=True)
+
+
+def test_picture_endpoint_requires_authentication():
+    assert TestClient(app).get('/receipts/1/picture').status_code == 401

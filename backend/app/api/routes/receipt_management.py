@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -55,6 +56,47 @@ def _safe_picture_path(file_path: str) -> Path:
             detail="Receipt picture is unavailable or outside the private upload folder.",
         )
     return normalized
+
+
+@router.get("/{receipt_id}/picture")
+def get_receipt_picture(
+    receipt_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Stream a private receipt image/PDF to accepted group members.
+
+    Never expose the server's file path or serve arbitrary filesystem paths.
+    This endpoint works for both unconfirmed and confirmed receipts, provided
+    their original picture has not been deleted.
+    """
+    receipt = db.get(Receipt, receipt_id)
+    if receipt is None:
+        raise HTTPException(status_code=404, detail="Receipt not found.")
+    require_group_membership(receipt.group_id, current_user, db)
+    if receipt.file_path is None:
+        raise HTTPException(status_code=404, detail="Receipt picture was removed.")
+
+    content_types = {
+        "jpg": "image/jpeg", "jpeg": "image/jpeg",
+        "png": "image/png", "pdf": "application/pdf",
+        "heic": "image/heic",
+    }
+    media_type = content_types.get(receipt.file_type)
+    if media_type is None:
+        raise HTTPException(status_code=415, detail="Receipt picture type is unsupported.")
+
+    picture = _safe_picture_path(receipt.file_path)
+    return FileResponse(
+        picture,
+        media_type=media_type,
+        filename=picture.name,
+        content_disposition_type="inline",
+        headers={
+            "Cache-Control": "private, no-store, max-age=0",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.delete("/{receipt_id}/picture", response_model=ReceiptPictureResult)

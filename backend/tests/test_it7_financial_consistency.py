@@ -119,6 +119,10 @@ def test_create_expense_with_optional_event(ledger):
     db.commit()
     response = client.post("/expenses", json=edit_request(group, alice, bob, "100.00", event.id))
     assert response.status_code == 201, response.text
+    assert response.json()["event_id"] == event.id
+    listed = client.get(f"/groups/{group.id}/expenses")
+    assert listed.status_code == 200, listed.text
+    assert any(e["id"] == response.json()["id"] and e["event_id"] == event.id for e in listed.json())
     db.expire_all()
     assert db.get(Expense, response.json()["id"]).event_id == event.id
 
@@ -135,6 +139,7 @@ def test_edit_expense_event_and_reject_foreign_group_event(ledger):
     db.commit()
     ok = client.put(f"/expenses/{expense.id}", json=edit_request(group, alice, bob, "100.00", event.id))
     assert ok.status_code == 200, ok.text
+    assert ok.json()["event_id"] == event.id
     invalid = client.put(f"/expenses/{expense.id}", json=edit_request(group, alice, bob, "100.00", foreign.id))
     assert invalid.status_code == 422, invalid.text
     db.expire_all()
