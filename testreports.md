@@ -420,7 +420,7 @@ These are the changes the system needs, sent to the developer who owns each one.
 | BUG-07 | Category on the expense routes and on Add Expense | Mick, Lukas, Cole | Iteration 8 (It8-1, It8-7, It8-12) |
 | BUG-08 | Rate limiting on login, register and receipt upload | Lukas | Iteration 10 (It10-1) |
 | BUG-09 | README: `EMAIL_VERIFICATION_SECRET` in place of `JWT_SECRET`, sprints Monday to Friday, what is built now, the real member balance check, and the project tree | Xander | Iteration 8 |
-| OI-26 | Write the pytest and Vitest exception (in place of `unittest`) into the README and the Requirements Specification | Xander | Iteration 8 |
+| OI-26 | Write the pytest and Vitest exception (in place of `unittest`) into the Requirements Specification. The README has had it since Nov 11. | Xander | Iteration 8 |
 | Process | GitHub Actions running both suites on every pull request. It was planned for Iteration 6 and is not on `main`. It would have caught BUG-01 and BUG-02 before the merge. | Xander | TBD |
 
 ### 5.2 Changes verified by a test run
