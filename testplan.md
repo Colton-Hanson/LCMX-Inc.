@@ -82,7 +82,7 @@ These terms are used throughout the three test documents.
 | Balance | What one member owes another inside a group, after debts that run in opposite directions are netted. |
 | Settlement (settle up) | A record that one member paid another outside the app. The app records it and moves no money. |
 | Receipt | A JPEG photo or PDF a user uploads. The AI reader turns it into a store, a date and line items. |
-| AI reader (LLM/OCR) | The model that reads receipts. Not chosen yet as of Nov 16. |
+| AI reader (LLM/OCR) | The model that reads receipts: a small Qwen vision model, about 2B parameters (exact model ID to be confirmed). Being connected in Iteration 7 (SCRUM-133). |
 | Site admin | A separate role that sees only site-level counts and can never open a user's data. |
 | Session | The login cookie that keeps a user signed in. It can expire or be revoked. |
 | Close-out | The Friday that ends each one-week iteration, when the full regression runs. |
@@ -177,7 +177,7 @@ Every Friday close-out runs everything, old and new, on the newest `main`. New c
 | GitHub Actions | Not set up yet | Run both suites on every pull request. Planned for Iteration 6; no workflow on `main` as of Nov 13. |
 | JIRA | n/a | Bug tickets (severity, owner, steps) |
 
-**Test framework note (OI-26):** the Charter and NFR-QUA-01 name `unittest` (PyUnit). The backend suite is written in pytest and the frontend in Vitest. pytest also runs `unittest`-style tests, so nothing written for PyUnit is lost. This exception still needs to be written into the README and the Requirements Specification.
+**Test framework note (OI-26):** the Charter and NFR-QUA-01 name `unittest` (PyUnit). The backend suite is written in pytest and the frontend in Vitest. pytest also runs `unittest`-style tests, so nothing written for PyUnit is lost. The README records this exception. It still needs to be written into the Requirements Specification.
 
 ### 5.3 Test environment and data
 
@@ -265,7 +265,7 @@ This follows the Iteration 8 to 10 plan. Thanksgiving week (Iteration 9) is full
 | Every pull request | Both suites run by hand before merging | GitHub Actions not set up |
 | Every Friday close-out | Full regression; failures filed as JIRA bugs | Ongoing |
 | Iteration 5 (Oct 26 to 30) | First full regression, E2E walkthrough, phone width, accessibility scan, security probes | Done Oct 30 |
-| Iteration 6 (Nov 2 to 6) | Upload tests; reading tests with recorded AI replies; first 15-receipt accuracy run | Upload tests merged Nov 8 to 11. The AI reader is not chosen, so reading tests and the accuracy run wait for it. |
+| Iteration 6 (Nov 2 to 6) | Upload tests; reading tests with recorded AI replies; first 15-receipt accuracy run | Upload tests merged Nov 8 to 11. The AI reader (a small Qwen model) is chosen but not connected yet, so reading tests and the accuracy run wait for it. |
 | Iteration 7 (Nov 9 to 13) | Review math, settlement, receipt picture deletion | Database tables merged Nov 13; routes and screens not on `main` yet |
 | Iteration 8 (Nov 16 to 20) | Monday kickoff regression on the live server, including re-tests of every 🔁 case (It8-16). Tests for budgets, analysis, recurring bills, activity, notifications and every blocked admin path (It8-18). Friday freeze close-out regression (It8-19). | Starts today |
 | Iteration 9 (Nov 23 to 27) | Thanksgiving break. No testing. Server check first thing Monday Nov 30. | Planned |
