@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.api.routes.receipt_management import router as receipt_management_router
 
 from app.api.routes.users import router as users_router
 from app.api.routes.health import router as health_router
@@ -16,6 +17,7 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.include_router(receipt_management_router)
 app.include_router(expenses.router)
 app.include_router(receipts.router)
 app.include_router(receipt_items.router)
