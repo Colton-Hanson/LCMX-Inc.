@@ -12,4 +12,4 @@ def test_alembic_has_a_single_head():
     config.set_main_option("script_location", str(backend_root / "alembic"))
 
     heads = ScriptDirectory.from_config(config).get_heads()
-    assert heads == ["460471bcd085"]
+    assert heads == ["7f31b2e4c9a0"]

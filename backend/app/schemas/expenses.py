@@ -9,6 +9,7 @@ class ExpenseCreate(BaseModel):
     description: str = Field(min_length=1, max_length=100)
     amount: Decimal = Field(gt=0)
     paid_by: int = Field(gt=0)
+    event_id: int | None = Field(default=None, gt=0)
     participant_ids: list[int] = Field(min_length=1)
     split_method: str = "even"
     split_values: dict[int, Decimal] | None = None

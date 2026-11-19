@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.api.routes.receipt_management import router as receipt_management_router
 
 from app.api.routes.users import router as users_router
 from app.api.routes.health import router as health_router
@@ -8,7 +9,7 @@ from app.api.routes.groups import router as groups_router
 from app.api.routes.invitations import router as invitations_router
 from app.api.routes.memberships import router as memberships_router
 from app.api.routes.events import router as events_router, group_events_router
-from app.api.routes import expenses, receipts
+from app.api.routes import expenses, receipts, receipt_items, expense_mutations, receipt_confirmation
 
 
 app = FastAPI(
@@ -16,8 +17,12 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.include_router(receipt_management_router)
 app.include_router(expenses.router)
 app.include_router(receipts.router)
+app.include_router(receipt_items.router)
+app.include_router(expense_mutations.router)
+app.include_router(receipt_confirmation.router)
 app.include_router(health_router)
 app.include_router(users_router)
 app.include_router(auth_router)
@@ -34,3 +39,5 @@ def root():
         "message": "Shared Expense Management API"
     }
 
+from app.api.routes import settlements
+app.include_router(settlements.router)
