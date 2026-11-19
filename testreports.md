@@ -22,7 +22,7 @@ Viskovic, Lukas
 | Document | Required document 5, part 3 of 3: Test Reports |
 | Other parts | [Test Plan](testplan.md) (part 1) · [Test Specification](testspecification.md) (part 2) |
 | Document owner | Xander McKie |
-| Version and date | 1.1 Draft, November 16, 2026 |
+| Version and date | 1.2 Draft, November 19, 2026 |
 | Status | Draft. A new run is added at every close-out. The final report comes from the full test pass on Dec 2. |
 
 ## Revision history
@@ -31,6 +31,7 @@ Viskovic, Lukas
 |---|---|---|---|
 | 1.0 | Oct 30, 2026 | Xander McKie | Oct 30 test run, as Section 3 of the single Test Documentation file. |
 | 1.1 | Nov 16, 2026 | Xander McKie | Moved into its own document in the course template's format: incidents, defects and changes. Added the Nov 16 code check of `main`. |
+| 1.2 | Nov 19, 2026 | Xander McKie | Local regression after bringing Iteration 7 onto `main`. Leftovers, stretch no-go, and the ticket comments for this week. |
 
 ## Contents
 
@@ -181,6 +182,83 @@ Two browsers, Alice and Bob, against the running app (backend `8c8498e`, fronten
 | BUG-07 | ❌ Open | ❌ Open, planned for Iteration 8 |
 | BUG-08 | ❌ Open | ❌ Open, planned for Iteration 10 |
 | BUG-09 | ❌ Open | ❌ Open, and one more line is now out of date |
+
+### 2.3 Run 3: Nov 19, 2026
+
+#### What was run
+
+| Item | Detail |
+|---|---|
+| Date | Thursday Nov 19, 2026 |
+| Code | Local `main` fast-forwarded to `origin/main` (`0498ca2`), then `origin/lukas-it7` merged into the working tree and left uncommitted |
+| Method | Local suites. There is no deployed URL in the README, so this is not a live server run. |
+| Backend | `python -m pytest -q` in `backend`, against `shared_expense_sprint4_test` after `alembic upgrade head` (`7f31b2e4c9a0`) |
+| Frontend | `npm test` in `frontend` |
+
+#### Results
+
+| Suite | Result |
+|---|---|
+| Backend | 264 passed, 6 skipped, 1 existing Starlette and httpx deprecation warning |
+| Frontend | 28 files, 358 passed |
+
+The 6 skips are `test_sprint8_pending.py`. They cover going over a goal, the mid-month edit rule, analysis range and empty state, a recurring bill once a month, activity and notifications staying with the people involved, and every blocked admin path. The features are not in this build. A live test would only fail because the feature is missing.
+
+New It7 cases that passed:
+
+| Case | Test |
+|---|---|
+| $10.00 shared by two of three people. The third person's balance does not move. | `test_ten_dollar_line_shared_by_two_of_three_leaves_the_third_unchanged` |
+| Unassigned lines left out | `test_unassigned_item_is_excluded` (already in Lukas's file) |
+| $10.00 as 3.34 + 3.33 + 3.33 accepted. 3.33 three times refused and writes nothing. | `test_ten_dollars_across_three_people_accepts_the_extra_cent`, `test_shares_short_one_cent_are_rejected_and_save_nothing` |
+| Cancel confirm saves nothing | `test_cancel_confirm_saves_nothing` |
+| Delete a $40.00 expense split $20.00 and $20.00 and both balances go back | `test_delete_forty_dollar_split_puts_both_balances_back` |
+| $20.00 of a $50.00 debt leaves $30.00 | `test_partial_repayment_updates_balance_and_history` (already in Lukas's file) |
+| A settlement that is never submitted leaves the $50.00 | `test_cancelled_settlement_changes_nothing` |
+| A member who is not on the debt gets 403 | `test_unrelated_member_cannot_record` (already in Lukas's file) |
+
+#### Monday decisions
+
+Recorded in the Requirements Specification on Nov 19:
+
+- The reader returns store, location, date, each item (name, quantity, price, line total), subtotal, tax, tip, and total.
+- "Could not read it" means bad JSON after one retry, a timeout, or no items. If the items do not add up, the app shows a warning and still lets you review.
+- Either person on a debt can record a settlement. The other person does not confirm. Both can see it.
+- The person who paid, the person who created the expense, and the group admin can edit or delete it.
+- Delete receipt picture removes the saved image and keeps the items.
+- A picture nobody confirms is kept 7 days, then deleted, and the receipt is marked abandoned.
+
+The mid-month budget edit rule is still open. Retroactive or forward only was not chosen.
+
+#### Iteration 7 leftovers to file in JIRA
+
+I cannot post to JIRA from here. File these:
+
+| Leftover | Why it is still open |
+|---|---|
+| Edit and delete are still admin-only | The agreed rule is the payer, the creator, and the group admin. Lukas's tests still expect admin-only, so the API was left as it is. |
+| No 7 day abandon job | The `abandoned` status exists. Nothing deletes an unconfirmed picture after 7 days. |
+| Reader rules are not wired | The field list and the "could not read it" rule are in the spec. The reader is not connected to them. |
+| Mid-month budget edit | Still undecided. |
+| Activity page, admin login, dashboard, access denied (SCRUM-154) | Not in the repo. Left unbuilt. Cole reviews them when they land. |
+
+#### Stretch goal
+
+No-go this week. Budgets, analysis, and the admin boundary are musts, and they are not in this build. The plan says stretch waits until those are done. Password reset, the formal ADA audit, and group budget goals stay stretch.
+
+#### Comments to paste on the tickets
+
+SCRUM-121: Review math is in from the hand worked numbers. Shared item, skipped item, the extra cent, and cancel. They run against Lukas's confirm route.
+
+SCRUM-122: Delete puts the money back. A partial settle leaves the rest. Cancel leaves the balance alone. A third person gets refused.
+
+SCRUM-153: Merged `lukas-it7` into `main` in the working tree and left the commit for me to make. Regression is local pytest and Vitest. 264 backend passed, 6 skipped. 358 frontend passed. No public server URL in the README, so I did not fake a live run. Decisions are in the requirements spec. Leftovers are in this report for filing. I cannot post to JIRA from here.
+
+SCRUM-154: Pages not built. They are not in the repo, and this pass leaves them until the features exist. Cole still reviews them when they land.
+
+SCRUM-155: Tests are in the tree and skipped. Budgets, analysis, recurring bills, activity, and admin paths are not in this build. A live test would only fail because the feature is missing. Mid-month edit is still open. You did not pick retroactive or forward only.
+
+SCRUM-156: Local regression after the merge. Stretch is no-go this week. Test spec, test report, and user guide cover review, settle, and edit and delete. They do not describe screens we do not have.
 
 ---
 
@@ -447,7 +525,7 @@ These are the changes the system needs, sent to the developer who owns each one.
 
 ## 6 Not yet tested
 
-AI reading and the receipt accuracy run, review and assignment, receipt picture deletion, edit and delete expense, settle up, tagging an expense to an event, recurring bills, budgets, analysis, activity, notifications, site admin, HTTPS, load, the manual screen reader pass and the first-time-user check. The receipt screens added Nov 11 have not been checked at phone width or scanned for accessibility. Each item has a case in the [Test Specification](testspecification.md) and a slot in the [Test Plan schedule](testplan.md#10-schedule).
+AI reading and the receipt accuracy run, the review screen, receipt picture deletion in the browser, the edit and delete screens, the settle screen, tagging an expense to an event, recurring bills, budgets, analysis, activity, notifications, site admin, HTTPS, load, the manual screen reader pass and the first-time-user check. The receipt screens added Nov 11 have not been checked at phone width or scanned for accessibility. The API for review math, cancel confirm, picture deletion, delete-reverses-balance, partial settle, cancel settle, and a third person settling someone else's debt passed on Nov 19. Each item has a case in the [Test Specification](testspec.md) and a slot in the [Test Plan schedule](testplan.md#10-schedule).
 
 ---
 
@@ -465,4 +543,6 @@ Testing to date used automated unit, API and component tests, an end-to-end walk
 
 On Oct 30, all 422 automated tests passed on the pre-merge code. The run found nine incidents: two Blockers, six Majors and one Minor. By the Nov 16 code check, three are fixed in code (BUG-01, BUG-02, BUG-05), one is partly fixed (BUG-06) and five are open (BUG-03, BUG-04, BUG-07, BUG-08, BUG-09).
 
-Further testing happens as features land. The Iteration 8 kickoff regression on the live server (It8-16) re-tests every 🔁 case. The Friday Nov 20 close-out runs everything before the feature freeze. The full test pass on Wednesday Dec 2 produces the final report.
+On Nov 19 the local suites passed: 264 backend tests, 6 skipped, and 358 frontend tests. The skips are the Sprint 8 cases. Stretch is no-go this week.
+
+Further testing happens as features land. The Friday Nov 20 close-out was this local regression. There is no deployed server URL in the README. The full test pass on Wednesday Dec 2 produces the final report.

@@ -9,7 +9,7 @@
 | Document owner | Xander McKie |
 | Instructor | Prof. Jawad |
 | Sponsor | Commerce Bank |
-| Version and date | 1.0 Draft, October 30, 2026 (covers Iterations 0 to 5) |
+| Version and date | 1.1 Draft, November 19, 2026 (Iterations 0 to 5 in the app, Iteration 7 on the API) |
 | Status | Draft. A section is added as each feature ships; complete in Iteration 10 (Dec 4). |
 
 ## Contents
@@ -28,14 +28,15 @@ The Shared Expense Management Tool keeps a shared ledger for people who split co
 
 It never connects to a bank and never moves money. When someone pays you back outside the app, you record it, and the balance changes.
 
-| Available now (Oct 30) | Coming later |
+| Available now (Nov 19) | Coming later |
 |---|---|
-| Create an account, log in, log out | Upload a receipt and let the AI read the items (Iteration 6) |
-| Profile, email and password changes | Check and assign receipt items to people (Iteration 7) |
-| Groups, invitations, members | Settle up, edit and delete expenses (Iteration 7) |
-| Events for part of a group | Budgets, monthly analysis, activity history (Iteration 8) |
-| Add an expense with an even, custom or percentage split | Admin dashboard (Iteration 9) |
-| Balances across all your groups | A hosted HTTPS address you can open from any device (Iteration 6) |
+| Create an account, log in, log out | The review, settle, and edit pages in the app (the API can do them; see 3.12) |
+| Profile, email and password changes | Budgets, monthly analysis, activity history (Iteration 8) |
+| Groups, invitations, members | Admin dashboard (Iteration 9) |
+| Events for part of a group | A hosted HTTPS address you can open from any device |
+| Add an expense with an even, custom or percentage split | |
+| Balances across all your groups | |
+| Upload a receipt photo or PDF | |
 | Works on a phone and a computer | |
 
 ---
@@ -258,22 +259,29 @@ To log out, open the account menu and choose **Log out**.
 
 Every page fits a phone screen without sideways scrolling. On a phone, **Add expense** in the top bar becomes a **+** button, and buttons are sized for fingers.
 
+## 3.12 Review, settle, and edit on the server
+
+These three work on the API. The pages are not in the app yet, so there is nothing to click for them. When the pages land, this section will get the screens.
+
+**Review a receipt.** After a receipt is read, you assign each item to the people who share it. An item can go to some of the group and not the rest. Those people do not pick up a share of that line. An item you leave unassigned is left out of the expense. The shares on a line have to add up to that line, to the cent. $10.00 across three people is $3.34, $3.33, and $3.33. If you cancel, nothing is saved. Saving keeps the picture. Deleting the picture is separate: the image goes away and the items stay. A picture nobody confirms is kept 7 days, then removed, and the receipt is marked abandoned. That cleanup job is not running yet.
+
+**Settle up.** This records a payment someone made outside the app. The app does not move money. Either person on the debt can record it. The other person does not have to confirm, and both can see it. A group admin can record it too. Paying part of it leaves the rest. $20.00 of a $50.00 debt leaves $30.00. If you start a settlement and do not submit it, the balance stays put. You cannot settle a debt you are not part of.
+
+**Edit and delete an expense.** Deleting a manual expense puts the balances back. A $40.00 expense split $20.00 and $20.00, once deleted, leaves $0.00 between those two people. Today only a group admin can edit or delete. The agreed rule is wider: the person who paid, the person who created it, and the group admin. The API has not caught up to that rule yet. An expense that came from a confirmed receipt cannot be edited or deleted until the receipt is handled.
+
 ---
 
 # 4 Coming in later iterations
 
-These sections will be written in full as each feature ships.
+These sections will be written in full as each feature ships. Review, settle, and edit are on the API (section 3.12). Their pages are still to come. Budget, analysis, activity, and admin screens get their sections when those screens exist.
 
 | Feature | What you will do | Iteration |
 |---|---|---|
-| Receipt upload | Take a photo, pick one from your gallery, or choose a PDF or JPEG. The AI reads the store, date and items. If the upload fails or the AI cannot read it, the page tells you which and what to do. | 6 (Nov 2 to 6) |
-| Check and assign items | Fix any item the AI got wrong, assign each item to one or more people, see everyone's share, then save it as an expense. You can delete the receipt picture and keep the items. | 7 (Nov 9 to 13) |
-| Edit and delete expenses | Change or remove an expense; balances recalculate. Deleting always asks first. | 7 |
-| Settle up | Record that someone paid you back, in full or in part, outside the app. No money moves through the app. | 7 |
-| Budgets | Set a monthly goal per category for yourself or a group. The app shows where you stand; it never blocks spending. | 8 (Nov 16 to 20) |
-| Monthly analysis | See spending by category and store, and how your share compares to your group's split. | 8 |
-| Activity history | See every expense, settlement and membership change that involves you. | 8 |
-| Admin dashboard | For Commerce Bank staff only: site-level numbers, never any one user's data. | 9 (Nov 23 to 25) |
+| Review, settle, and edit pages | The same actions as section 3.12, from the app instead of the API | 7, pages still to come |
+| Budgets | Set a monthly goal per category for yourself or a group. The app shows where you stand; it never blocks spending. Going over a goal is never blocked. The mid-month edit rule is still open. | 8 (Nov 16 to 20) |
+| Monthly analysis | See spending by category and store, and how your share compares to your group's split. A new account sees an empty state. | 8 |
+| Activity history | See every expense, settlement and membership change that involves you. Someone else does not see it. | 8 |
+| Admin dashboard | For Commerce Bank staff only: site-level numbers, never any one user's data. Login, dashboard, and access denied are not built. | 9 (Nov 23 to 25) |
 
 ---
 

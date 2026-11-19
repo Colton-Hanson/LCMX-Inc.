@@ -96,6 +96,29 @@ def test_edit_after_partial_repayment_recalculates_remaining_debt(ledger):
     assert db.get(Expense, expense.id).amount == Decimal("80.00")
 
 
+def test_delete_forty_dollar_split_puts_both_balances_back(ledger):
+    """Hand-worked: Alice paid $40.00, split $20.00 and $20.00. Deleting it clears the $20.00 Bob owed."""
+    db, client, group, alice, bob = ledger
+    payload = ExpenseCreate(
+        group_id=group.id, description="Groceries", amount="40.00",
+        paid_by=alice.id, participant_ids=[alice.id, bob.id],
+    )
+    expense = create_expense_transaction(
+        payload, {alice.id: Decimal("20.00"), bob.id: Decimal("20.00")}, db,
+    )
+    db.expire_all()
+    owed = balance(db, group, alice, bob)
+    assert owed.debt == Decimal("20.00")
+    assert owed.indebted_party == bob.id
+    response = client.delete(f"/expenses/{expense.id}")
+    assert response.status_code == 200, response.text
+    db.expire_all()
+    cleared = balance(db, group, alice, bob)
+    assert cleared.debt == 0
+    assert cleared.indebted_party is None
+    assert db.get(Expense, expense.id) is None
+
+
 def test_delete_after_repayment_creates_refund_obligation(ledger):
     db, client, group, alice, bob = ledger
     expense = create_100(db, group, alice, bob)

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -146,6 +146,115 @@ def test_double_confirmation_conflicts(scenario):
 
 def test_nonmember_cannot_confirm(scenario):
     assert send(scenario, actor="outsider").status_code == 403
+
+
+def add_member_and_ten_dollar_item(scenario, email_prefix):
+    """Add an accepted member and a $10.00 line to the fixture receipt."""
+    db = scenario["db"]
+    member = User(email=f"{email_prefix}-{uuid4().hex}@example.com", password_hash="test")
+    db.add(member)
+    db.flush()
+    db.add(UserGroup(
+        user_id=member.id, group_id=scenario["group"].id, invite_status="accepted",
+    ))
+    bread = Item(
+        name="Bread", quantity=1, unit_price=Decimal("10.00"),
+        line_total=Decimal("10.00"), position=2,
+    )
+    db.add(bread)
+    db.flush()
+    db.add(Receipt_Item(receipt_id=scenario["receipt"].id, item_id=bread.id))
+    # Commit before the request so a rejected confirm does not drop the fixture.
+    db.commit()
+    return member, bread
+
+
+def balances_touching(db, group_id, user_id):
+    return db.query(Balance).filter(
+        Balance.group_id == group_id,
+        or_(Balance.user_1_id == user_id, Balance.user_2_id == user_id),
+    ).all()
+
+
+def test_ten_dollar_line_shared_by_two_of_three_leaves_the_third_unchanged(scenario):
+    """Hand-worked: $10.00 shared by Alice and Bob. Casey is in the group and not on the line."""
+    casey, bread = add_member_and_ten_dollar_item(scenario, "confirm-c")
+    alice, bob = scenario["alice"], scenario["bob"]
+    response = send(scenario, assignments=[
+        {"item_id": bread.id, "shares": [
+            {"user_id": alice.id, "amount": "5.00"},
+            {"user_id": bob.id, "amount": "5.00"},
+        ]},
+    ])
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["amount"] == "10.00"
+    assert scenario["pizza"].id in body["excluded_item_ids"]
+    assert scenario["soda"].id in body["excluded_item_ids"]
+    db = scenario["db"]
+    pair = db.get(Balance, (
+        scenario["group"].id, min(alice.id, bob.id), max(alice.id, bob.id),
+    ))
+    assert pair.indebted_party == bob.id
+    assert pair.debt == Decimal("5.00")
+    assert balances_touching(db, scenario["group"].id, casey.id) == []
+
+
+def test_ten_dollars_across_three_people_accepts_the_extra_cent(scenario):
+    """Hand-worked: $10.00 is 3.34 + 3.33 + 3.33. The extra cent is assigned and the sum is exact."""
+    casey, bread = add_member_and_ten_dollar_item(scenario, "confirm-cent")
+    alice, bob = scenario["alice"], scenario["bob"]
+    response = send(scenario, assignments=[
+        {"item_id": bread.id, "shares": [
+            {"user_id": alice.id, "amount": "3.34"},
+            {"user_id": bob.id, "amount": "3.33"},
+            {"user_id": casey.id, "amount": "3.33"},
+        ]},
+    ])
+    assert response.status_code == 201, response.text
+    assert response.json()["amount"] == "10.00"
+    db = scenario["db"]
+    bob_balance = db.get(Balance, (
+        scenario["group"].id, min(alice.id, bob.id), max(alice.id, bob.id),
+    ))
+    casey_balance = db.get(Balance, (
+        scenario["group"].id, min(alice.id, casey.id), max(alice.id, casey.id),
+    ))
+    assert bob_balance.debt == Decimal("3.33")
+    assert bob_balance.indebted_party == bob.id
+    assert casey_balance.debt == Decimal("3.33")
+    assert casey_balance.indebted_party == casey.id
+
+
+def test_shares_short_one_cent_are_rejected_and_save_nothing(scenario):
+    """3.33 three times is $9.99, not $10.00. Confirm writes no expense and no balance."""
+    casey, bread = add_member_and_ten_dollar_item(scenario, "confirm-short")
+    alice, bob = scenario["alice"], scenario["bob"]
+    response = send(scenario, assignments=[
+        {"item_id": bread.id, "shares": [
+            {"user_id": alice.id, "amount": "3.33"},
+            {"user_id": bob.id, "amount": "3.33"},
+            {"user_id": casey.id, "amount": "3.33"},
+        ]},
+    ])
+    assert response.status_code == 422, response.text
+    db = scenario["db"]
+    assert db.query(Expense).filter_by(group_id=scenario["group"].id).count() == 0
+    assert db.query(Balance).filter_by(group_id=scenario["group"].id).count() == 0
+    receipt = db.get(Receipt, scenario["receipt"].id)
+    assert receipt.status == "read"
+    assert receipt.expense_id is None
+
+
+def test_cancel_confirm_saves_nothing(scenario):
+    """Leaving the review without confirming writes no expense and leaves balances alone."""
+    db = scenario["db"]
+    receipt = db.get(Receipt, scenario["receipt"].id)
+    assert receipt.status == "read"
+    assert receipt.expense_id is None
+    assert db.query(Expense).filter_by(group_id=scenario["group"].id).count() == 0
+    assert db.query(Balance).filter_by(group_id=scenario["group"].id).count() == 0
+    assert db.query(ItemAssignment).count() == 0
 
 
 def test_failure_rolls_back_all_records(scenario):

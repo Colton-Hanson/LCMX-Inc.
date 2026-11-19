@@ -146,7 +146,7 @@ Image is processed with LLM and LLM is able to parse the image, take information
 4. System status box opens up.
 5. User chooses image or takes picture.
 6. Once image is successfully uploaded it should show the user a green checkmark showing success.
-7. After successful image upload, the application with then integrate LLM operations to parse through using an OCR image reader and pick out significant information (Store location, items bought, amounts for each time, and time/date)
+7. After successful image upload, the application with then integrate LLM operations to parse through using an OCR image reader and pick out significant information. Decided Nov 19, 2026: the reader sends back the store, the location, the date, each item (name, quantity, price, and line total), the subtotal, tax, tip, and the total.
 8. LLM parsed info gets added to backend database for secure storage.
 9. Once data is added to database, it will then reflect back to the front end UI so user can see data that has been uploaded.
 10. The data should be structured JSON, but will be reflected in a React based UIX.
@@ -157,6 +157,7 @@ Image is processed with LLM and LLM is able to parse the image, take information
 - This could be, wrong image format, too large of an image, or corrupt file.
 - The application should prompt the user to re-upload the image, possibly offering a solution if issue is easy fix such as “too large of file, please compress or resize image”.
 - If image is successfully uploaded, but LLM is not able to successfully parse and read the image, an error box should appear stating said error in a clean concise way, and offer a solution.
+- Decided Nov 19, 2026: a receipt counts as "could not read it" when the reply is bad JSON after one retry, when the reader times out, or when no items are found. If the items do not add up, the app shows a warning and still lets the user review. The reader is not wired to this rule yet.
 
 **Open Issues:**
 - What type of OCR image reader will be reading the images and grabbing what is important in many types of formats.
@@ -344,9 +345,12 @@ Extracted items are corrected and assigned to specific people; expense is saved 
 - If an item is unassigned, system flags it and excludes it from the split until resolved
 - If user cancels, extracted data is not saved
 
-**Open Issues:**
-- Should partial item assignment be allowed? (splitting one item across some but not all people)
-- What happens to the receipt image once review is finished - keep or delete?
+**Decisions (Nov 19, 2026):**
+- An item can be shared by some of the people in the group. People left off that item do not pick up a share of it.
+- An item nobody is assigned to is left out of the expense.
+- Shares on an item add up to that item's line total, to the cent. $10.00 across three people is 3.34, 3.33, and 3.33.
+- Cancel saves nothing. The receipt stays unread into the ledger, and balances do not move.
+- Saving the review keeps the receipt picture. Deleting the picture is a separate action.
 
 ---
 
@@ -403,9 +407,12 @@ Balance is reset to zero (or reduced) and logged in activity history
 - If a partial amount is settled, the remaining balance stays outstanding
 - If cancelled, balance is unchanged
 
+**Decisions (Nov 19, 2026):**
+- The other person does not have to confirm. Either person on the debt can record the settlement, and both can see it.
+- The app records a payment made outside the app. It does not move money. The current API also lets a group admin record the settlement.
+
 **Open Issues:**
-- Since the app doesn't move real money, does settling just mean “mark as paid outside the app” - the UI language needs to make that clear
-- Should the other person have to confirm the settlement too, or is it one sided?
+- The settle screen still needs wording that says the payment happened outside the app.
 
 ---
 
@@ -431,11 +438,11 @@ Categories and spending goals are saved and tracked going forward
 
 **Alternate Flow / Extensions:**
 - For a group budget, system asks whether the goal applies per-person or to the group total
-- If a goal is editged mid-month, system needs a rule for weather that applies retroactively or only going forward
+- If a goal is edited mid-month, the rule for whether that applies to expenses already saved or only going forward is still open (Nov 19, 2026). No rule was chosen.
 
 **Open Issues:**
-- Per-person vs. shared group group goal - spec flags this as an open idea, needs decision
-- What happens when a goal is exceeded - just a visual flag or notification too?
+- Per-person vs. shared group goal. Still open.
+- What happens when a goal is exceeded, besides the app never blocking the expense. A visual flag, a notification, or both is still open.
 
 ---
 
@@ -519,9 +526,10 @@ Receipt image is deleted; itemized data stays unless the whole expense is also d
 - Deleting the whole expense (not just the image) is a separate action with its own confirmation
 - If deletion fails, system shows an error and keeps the image
 
-**Open Issues:**
-- How long are receipt images retained by default before a user deletes one, if at all
-- Should there be an auto-purge policy (e.g. 30 days) instead of relying on manual deletion
+**Decisions (Nov 19, 2026):**
+- Delete receipt picture removes the saved image and keeps the items.
+- A picture nobody confirms is kept 7 days, then deleted, and the receipt is marked abandoned. The `abandoned` status exists. The 7 day cleanup job is not in the build yet.
+- The person who paid, the person who created the expense, and the group admin can edit or delete the expense. The current API still allows only the group admin. That gap is an Iteration 7 leftover.
 
 ---
 

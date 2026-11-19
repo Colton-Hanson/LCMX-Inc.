@@ -66,6 +66,14 @@ def post(data, payload):
         return client.post(f"/groups/{data['group'].id}/settlements", json=payload)
 
 
+def test_cancelled_settlement_changes_nothing(data):
+    """Starting a settlement and not submitting it leaves the $50.00 debt in place."""
+    data["db"].refresh(data["balance"])
+    assert data["balance"].debt == Decimal("50.00")
+    assert data["balance"].indebted_party == data["debtor"].id
+    assert data["db"].query(Settlement).count() == 0
+
+
 def test_partial_repayment_updates_balance_and_history(data):
     result = post(data, request(data))
     assert result.status_code == 201, result.text

@@ -22,7 +22,7 @@ Viskovic, Lukas
 | Document | Required document 5, part 2 of 3: Test Specification |
 | Other parts | [Test Plan](testplan.md) (part 1) · [Test Reports](testreports.md) (part 3) |
 | Document owner | Xander McKie |
-| Version and date | 1.1 Draft, November 16, 2026 |
+| Version and date | 1.2 Draft, November 19, 2026 |
 | Status | Draft. Statuses from the Oct 30 run, updated with a code check of `main` at `83aaf1f` (Nov 13). |
 
 ## Revision history
@@ -31,6 +31,7 @@ Viskovic, Lukas
 |---|---|---|---|
 | 1.0 | Oct 30, 2026 | Xander McKie | Test cases as tables in the single Test Documentation file. |
 | 1.1 | Nov 16, 2026 | Xander McKie | One block per case in the course template's fields. Added TC-EXP-17 (recurring bills), TC-RCP-09 and TC-RCP-10 (receipt privacy and rollback, from the new receipt tests) and TC-SOC-02 (notifications). Statuses updated from the Nov 16 code check. |
+| 1.2 | Nov 19, 2026 | Xander McKie | It7 review, settle, and delete cases pointed at the tests that passed on the local suite. Sprint 8 cases noted as written and skipped. |
 
 ## Contents
 
@@ -98,13 +99,13 @@ Unless a case says otherwise:
 |---|---|---|---|---|---|---|
 | Accounts and sessions | 16 | 15 | 0 | 0 | 0 | 1 |
 | Groups, invitations, members, events | 15 | 12 | 1 | 0 | 1 | 1 |
-| Expenses, splits, balances | 17 | 10 | 1 | 1 | 2 | 3 |
-| Receipts and AI reading | 10 | 0 | 0 | 0 | 5 | 5 |
+| Expenses, splits, balances | 17 | 10 | 1 | 3 | 2 | 1 |
+| Receipts and AI reading | 10 | 0 | 0 | 3 | 5 | 2 |
 | Budgets and analysis | 5 | 0 | 0 | 0 | 0 | 5 |
 | Activity and notifications | 2 | 0 | 0 | 0 | 0 | 2 |
 | Site admin | 3 | 0 | 0 | 0 | 0 | 3 |
 | Security, layout, accessibility, data, performance | 12 | 4 | 3 | 0 | 1 | 4 |
-| **Total** | **80** | **41** | **5** | **1** | **9** | **24** |
+| **Total** | **80** | **41** | **5** | **6** | **9** | **19** |
 
 ---
 
@@ -857,8 +858,8 @@ Use cases UC-07, UC-09 and UC-10.
 | Test Data | New amount: $70.00 |
 | Test Actions | 1. Edit `Gas` to $70.00 and save.<br>2. Open Balances.<br>3. Delete `Gas`, reading the confirmation before confirming.<br>4. Open Balances. |
 | Expected Results | After step 2, Bob owes Alice $35.00. The confirmation in step 3 says what is lost and what is kept. After step 4, Bob owes Alice $0.00. |
-| Covered by | Planned: API and component tests |
-| Status | ⏳ Not on `main` as of Nov 13 (was Iteration 7: It7-12, It7-17). |
+| Covered by | `test_it7_financial_consistency::test_delete_forty_dollar_split_puts_both_balances_back` and `test_delete_after_repayment_creates_refund_obligation`. Edit after a partial payment: `test_edit_after_partial_repayment_recalculates_remaining_debt`. |
+| Status | ⚠️ API passed Nov 19 (local pytest). Hand-worked delete: a $40.00 expense split $20.00 and $20.00, then delete, leaves $0.00. The screen is not in the app. Edit and delete are still admin-only. The agreed rule is payer, creator, and group admin. |
 
 ### TC-EXP-16: Settle up in full or in part
 
@@ -872,9 +873,9 @@ Use cases UC-07, UC-09 and UC-10.
 | Initial Conditions | TC-EXP-01 is done (Bob owes Alice $31.62). Logged in as Bob. |
 | Test Data | Partial payment: $20.00<br>Too much: $50.00 |
 | Test Actions | 1. Open Settle Up for Alice and read the wording.<br>2. Record $20.00 and confirm.<br>3. Open Balances and history as Bob, then as Alice.<br>4. Try to record $50.00. |
-| Expected Results | Step 1 says the app records a payment made outside it and moves no money. After step 3, $11.62 is left and both users' history shows the payment. Step 4 is refused because it is more than what is owed. |
-| Covered by | Planned: API and component tests |
-| Status | ⏳ The settlements table was added Nov 13 (`560e479`). The route and the screen are not on `main` yet (was Iteration 7: It7-13, It7-18). |
+| Expected Results | Step 1 says the app records a payment made outside it and moves no money. After step 3, $11.62 is left and both users' history shows the payment. Step 4 is refused because it is more than what is owed. A settlement that is never submitted leaves the balance as it was. A member who is not on the debt is refused. |
+| Covered by | `test_settlements::test_partial_repayment_updates_balance_and_history` ($20.00 of $50.00 leaves $30.00), `test_cancelled_settlement_changes_nothing`, `test_unrelated_member_cannot_record` |
+| Status | ⚠️ API passed Nov 19 (local pytest). The settle screen is not in the app. |
 
 ### TC-EXP-17: Recurring bill repeats monthly
 
@@ -889,8 +890,8 @@ Use cases UC-07, UC-09 and UC-10.
 | Test Data | Title `Rent`, $1,200.00, paid by Alice, even split, due on the 1st, repeats monthly |
 | Test Actions | 1. Add the bill with "repeats monthly" turned on.<br>2. Run the daily job for next month's due date.<br>3. Run it again the same day.<br>4. Open Balances. |
 | Expected Results | After step 2, one new copy of `Rent` exists for that month. Step 3 adds nothing. Balances include each copy once. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 (It8-4, It8-9, It8-12). Follows the Nov 16 decision on how bills repeat. Third in line to be cut if Iteration 8 runs short. |
+| Covered by | `test_sprint8_pending::test_recurring_bill_is_added_once_per_month` (skipped) |
+| Status | ⏳ Iteration 8 (It8-4, It8-9, It8-12). The test is written and skipped until recurring bills exist. Third in line to be cut if Iteration 8 runs short. |
 
 ---
 
@@ -942,7 +943,7 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Initial Conditions | A receipt uploaded as in TC-RCP-01. |
 | Test Data | Recorded reader replies for three receipts (no real AI calls in automated runs) |
 | Test Actions | 1. Run the reading step with a recorded reply.<br>2. Send `GET /receipts/{id}`.<br>3. Open the reading screen. |
-| Expected Results | The status moves from `uploaded` to `reading` to `read`. The reply is checked as valid JSON before saving. Store, date and items are saved and shown in the order they appear on the receipt. |
+| Expected Results | The status moves from `uploaded` to `reading` to `read`. The reply is checked as valid JSON before saving. Decided Nov 19: the reader returns store, location, date, each item (name, quantity, price, line total), subtotal, tax, tip, and total. Those fields are saved and shown in receipt order. |
 | Covered by | `test_receipts::test_get_receipt_read_returns_ordered_items`, `test_get_receipt_processing_states`; planned pytest with recorded replies |
 | Status | ⏳ The reader (a small Qwen model) is chosen but not connected yet (SCRUM-133). The status route and its tests are merged. |
 
@@ -958,7 +959,7 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Initial Conditions | A receipt uploaded as in TC-RCP-01. |
 | Test Data | A recorded reader reply that cannot be used |
 | Test Actions | 1. Run the reading step with the bad reply.<br>2. Open the receipt's screen. |
-| Expected Results | The status is `failed`, a state of its own, not an upload error. The screen says it was uploaded but could not be read, and offers manual entry. |
+| Expected Results | The status is `failed`, a state of its own, not an upload error. Decided Nov 19: that happens for bad JSON after one retry, a timeout, or no items found. If the items do not add up, the app shows a warning and still lets you review. The screen says it was uploaded but could not be read, and offers manual entry. |
 | Covered by | `test_receipts::test_reading_failure_is_its_own_state`; `receiptScreens.test.jsx`; planned recorded bad reply |
 | Status | 🔁 The `failed` state and its screen were merged Nov 8 to 11. The reader that sets it is not built. |
 
@@ -990,9 +991,9 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Initial Conditions | A read receipt in Apartment 4B with at least four items. |
 | Test Data | One item renamed and repriced; one item assigned to two of the members, not all (OI-16); one item left unassigned |
 | Test Actions | 1. Open the review screen.<br>2. Edit, assign and leave items as in the test data.<br>3. Look at each person's total before saving. |
-| Expected Results | Every item can be edited. Each item can go to one or more people. The unassigned item is flagged and left out. Each person's total is shown before saving and matches a hand calculation to the cent. |
-| Covered by | Planned: component and math tests |
-| Status | ⏳ The item assignments table was added Nov 13 (`560e479`). The review screen is a placeholder and the save route is not built (was Iteration 7). |
+| Expected Results | Every item can be edited. An item can be shared by some people, and the people left off it do not take a share. The unassigned item is left out. $10.00 across three people is accepted as 3.34, 3.33, and 3.33. 3.33 three times is refused and writes nothing. |
+| Covered by | `test_receipt_confirmation::test_ten_dollar_line_shared_by_two_of_three_leaves_the_third_unchanged`, `test_unassigned_item_is_excluded`, `test_ten_dollars_across_three_people_accepts_the_extra_cent`, `test_shares_short_one_cent_are_rejected_and_save_nothing` |
+| Status | ⚠️ API passed Nov 19 (local pytest). The review screen is not in the app. |
 
 ### TC-RCP-07: Cancel the review, then save
 
@@ -1006,9 +1007,9 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Initial Conditions | The review from TC-RCP-06, filled in. |
 | Test Data | None beyond the initial conditions |
 | Test Actions | 1. Press Cancel.<br>2. Open the review again, fill it in and press Save.<br>3. Open Balances. |
-| Expected Results | After step 1, nothing is saved. After step 2, one expense with its splits and balances is saved, the receipt is marked confirmed and its picture is deleted. Step 3 shows the new balances. |
-| Covered by | Planned: API test |
-| Status | ⏳ Not on `main` as of Nov 13 (was Iteration 7). |
+| Expected Results | After step 1, nothing is saved. The receipt stays at `read`, with no expense and no balance change. After step 2, one expense with its splits and balances is saved and the receipt is marked confirmed. The picture stays until someone deletes it. Step 3 shows the new balances. |
+| Covered by | `test_receipt_confirmation::test_cancel_confirm_saves_nothing`, `test_confirmation_persists_everything_atomically` |
+| Status | ⚠️ API passed Nov 19 (local pytest). The review screen is not in the app. |
 
 ### TC-RCP-08: Delete the receipt picture, keep the items
 
@@ -1022,9 +1023,9 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Initial Conditions | A receipt with saved items and its picture still stored. |
 | Test Data | A forced delete failure for step 3 |
 | Test Actions | 1. Press Delete picture and read the confirmation.<br>2. Confirm.<br>3. Repeat on another receipt with the delete forced to fail. |
-| Expected Results | The confirmation says the items are kept. After step 2, the picture is gone and the items remain. After step 3, the picture is still there. |
-| Covered by | Planned: API and component tests |
-| Status | ⏳ The `abandoned` receipt status and its index were added Nov 13 (`560e479`). The delete route and dialog are not built (was Iteration 7). |
+| Expected Results | The confirmation says the items are kept. After step 2, the picture is gone and the items remain. After step 3, the picture is still there. A picture nobody confirms is kept 7 days, then deleted, and the receipt is marked abandoned. |
+| Covered by | `test_receipt_management::test_delete_picture_preserves_items_expense_and_receipt`, `test_failed_commit_restores_original_picture` |
+| Status | ⚠️ API passed Nov 19 (local pytest). The dialog is not in the app. The 7 day cleanup job is not built. The `abandoned` status exists. |
 
 ### TC-RCP-09: Receipts stay private to the group
 
@@ -1062,7 +1063,7 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 
 ## 6 Budgets and analysis
 
-All five cases are built and tested in Iteration 8 (Nov 16 to 20).
+All five cases are scheduled for Iteration 8 (Nov 16 to 20). The checks are written in `test_sprint8_pending.py` and skipped until the features exist, so the suite stays green. The mid-month edit rule is still open.
 
 ### TC-BUD-01: Set a monthly goal per category
 
@@ -1077,7 +1078,7 @@ All five cases are built and tested in Iteration 8 (Nov 16 to 20).
 | Test Data | Group goal: Food, $300.00 for November, Apartment 4B<br>Expense: `Groceries`, $120.00, Food |
 | Test Actions | 1. Set the goal.<br>2. Add the expense.<br>3. Open the budget screen.<br>4. Set the goal again as per person instead of total, if that option is built. |
 | Expected Results | After step 3, Food shows $120.00 spent of $300.00. Step 4 shows each person's part of the goal. |
-| Covered by | Planned (It8-18) |
+| Covered by | No skipped test yet. Goals themselves are not in this build. The over-goal check is the one written ahead. |
 | Status | ⏳ Iteration 8 (It8-2, It8-7, It8-13). Per-person goals (FR-BUD-04) are second in line to be cut. |
 
 ### TC-BUD-02: Go over a goal
@@ -1093,8 +1094,8 @@ All five cases are built and tested in Iteration 8 (Nov 16 to 20).
 | Test Data | `Party food`, $200.00, Food |
 | Test Actions | 1. Add the expense.<br>2. Open the budget screen. |
 | Expected Results | The expense saves. Food shows $320.00 of $300.00 and is flagged as over. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 |
+| Covered by | `test_sprint8_pending::test_going_over_a_goal_is_never_blocked` (skipped) |
+| Status | ⏳ Iteration 8. The test is written and skipped until budget goals exist. |
 
 ### TC-BUD-03: Edit a goal mid-month
 
@@ -1108,9 +1109,9 @@ All five cases are built and tested in Iteration 8 (Nov 16 to 20).
 | Initial Conditions | TC-BUD-01 is done, partway through November. |
 | Test Data | New Food goal: $400.00 |
 | Test Actions | 1. Change the goal.<br>2. Open the budget screen. |
-| Expected Results | The goal and spending follow the OI-09 rule decided Nov 16. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 |
+| Expected Results | The goal and spending follow the mid-month rule once it is chosen. On Nov 19 that rule was still open: retroactive, or forward only. |
+| Covered by | `test_sprint8_pending::test_mid_month_goal_edit_rule_is_still_open` (skipped) |
+| Status | ⏳ Iteration 8. Skipped because the rule is not decided. |
 
 ### TC-ANL-01: Analysis for a month or a date range
 
@@ -1125,8 +1126,8 @@ All five cases are built and tested in Iteration 8 (Nov 16 to 20).
 | Test Data | Month: November 2026; range: September to November 2026 |
 | Test Actions | 1. Open analysis for November.<br>2. Switch to the date range. |
 | Expected Results | Each view shows each member's contribution against the configured split, spending by category and by store, and a category chart. A range can cover up to 12 months. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 (It8-3, It8-8, It8-14) |
+| Covered by | `test_sprint8_pending::test_analysis_range_and_empty_state` (skipped; also covers the empty state in TC-ANL-02) |
+| Status | ⏳ Iteration 8 (It8-3, It8-8, It8-14). The test is written and skipped until analysis exists. |
 
 ### TC-ANL-02: New account with no history
 
@@ -1141,8 +1142,8 @@ All five cases are built and tested in Iteration 8 (Nov 16 to 20).
 | Test Data | None |
 | Test Actions | 1. Open the analysis page. |
 | Expected Results | The defined empty state is shown. No broken or empty chart. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 |
+| Covered by | `test_sprint8_pending::test_analysis_range_and_empty_state` (skipped) |
+| Status | ⏳ Iteration 8. The test is written and skipped until analysis exists. |
 
 ---
 
@@ -1161,8 +1162,8 @@ All five cases are built and tested in Iteration 8 (Nov 16 to 20).
 | Test Data | One expense, one settlement and one member removal in Road Trip |
 | Test Actions | 1. Make each change.<br>2. Open activity as Alice, then as Bob, then as Dave. |
 | Expected Results | Alice and Bob see each change that involves them. Dave sees none of them. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 (It8-5, It8-10, It8-17) |
+| Covered by | `test_sprint8_pending::test_activity_and_notifications_stay_with_the_people_involved` (skipped) |
+| Status | ⏳ Iteration 8 (It8-5, It8-10, It8-17). The test is written and skipped until activity exists. |
 
 ### TC-SOC-02: Notifications
 
@@ -1177,14 +1178,14 @@ All five cases are built and tested in Iteration 8 (Nov 16 to 20).
 | Test Data | One expense added by Alice |
 | Test Actions | 1. As Alice, add the expense.<br>2. As Bob, open the bell menu.<br>3. Mark the notification read.<br>4. Turn notifications off in Bob's settings and repeat step 1.<br>5. As Dave, open the bell menu. |
 | Expected Results | After step 2, Bob sees the notification and an unread count. After step 3, the count clears. After step 4, Bob gets no new notification. Dave sees none of Bob's. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 (It8-5, It8-10, It8-15). Fourth in line to be cut. |
+| Covered by | `test_sprint8_pending::test_activity_and_notifications_stay_with_the_people_involved` (skipped) |
+| Status | ⏳ Iteration 8 (It8-5, It8-10, It8-15). The test is written and skipped until notifications exist. Fourth in line to be cut. |
 
 ---
 
 ## 8 Site admin
 
-All three cases are built and tested in Iteration 8.
+All three cases are scheduled for Iteration 8. The blocked-path check is written in `test_sprint8_pending.py` and skipped until admin login, the dashboard, and the access-denied pages exist. Those pages were not built in this pass (SCRUM-154). Cole reviews them when they land.
 
 ### TC-ADM-01: Admin login
 
@@ -1199,8 +1200,8 @@ All three cases are built and tested in Iteration 8.
 | Test Data | The admin's login; Alice's login; a wrong admin password |
 | Test Actions | 1. Log in as the admin on the admin login page.<br>2. Try Alice's login there.<br>3. Try the wrong password. |
 | Expected Results | Step 1 opens the dashboard. Steps 2 and 3 get the same generic error wording as a failed user login. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 (It8-6, It8-11, It8-17) |
+| Covered by | `test_sprint8_pending::test_every_blocked_admin_path` (skipped) |
+| Status | ⏳ Iteration 8 (It8-6, It8-11, It8-17). The test is written and skipped until the admin pages exist. |
 
 ### TC-ADM-02: Admin dashboard
 
@@ -1215,8 +1216,8 @@ All three cases are built and tested in Iteration 8.
 | Test Data | None |
 | Test Actions | 1. Open the dashboard. |
 | Expected Results | It shows only uptime, error log count, total users and flagged issues, as decided in OI-13. No per-user or per-group data. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 |
+| Covered by | `test_sprint8_pending::test_every_blocked_admin_path` (skipped; the dashboard page itself is SCRUM-154 and was not built) |
+| Status | ⏳ Iteration 8. The blocked-path test is written and skipped until the admin pages exist. |
 
 ### TC-ADM-03: Admin tries to open user data; non-admin opens an admin page
 
@@ -1231,8 +1232,8 @@ All three cases are built and tested in Iteration 8.
 | Test Data | Alice's group and expense IDs |
 | Test Actions | 1. As the admin, request Alice's group, expenses and balances.<br>2. As Alice, open the admin dashboard and its routes.<br>3. Read the admin access log. |
 | Expected Results | Every request in steps 1 and 2 is blocked. Each one is in the log from step 3. |
-| Covered by | Planned (It8-18) |
-| Status | ⏳ Iteration 8 |
+| Covered by | `test_sprint8_pending::test_every_blocked_admin_path` (skipped) |
+| Status | ⏳ Iteration 8. The test is written and skipped until the admin pages exist. |
 
 ---
 
