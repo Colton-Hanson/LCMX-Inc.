@@ -8,7 +8,7 @@ from app.services.split_calculator import (
     SplitCalculationError,
     calculate_splits,
 )
-from models import User, UserGroup
+from models import Event, User, UserGroup
 
 
 def validate_expense(
@@ -29,6 +29,12 @@ def validate_expense(
         current_user,
         db,
     )
+
+    # Optional event must belong to this same group.
+    if expense.event_id is not None:
+        event = db.get(Event, expense.event_id)
+        if event is None or event.group_id != expense.group_id:
+            raise HTTPException(status_code=422, detail="Event must belong to this group.")
 
     # Check that the payer and all participants
     # belong to the group.

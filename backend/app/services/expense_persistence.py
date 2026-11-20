@@ -14,6 +14,7 @@ def save_expense(expense_data, shares: dict[int, Decimal], db: Session) -> Expen
         name=expense_data.description,
         amount=expense_data.amount,
         paid_by=expense_data.paid_by,
+        event_id=getattr(expense_data, "event_id", None),
     )
 
     db.add(expense)

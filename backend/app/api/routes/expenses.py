@@ -46,6 +46,7 @@ def create_expense(
         "description": expense.name,
         "amount": str(expense.amount),
         "paid_by": expense.paid_by,
+        "event_id": getattr(expense, "event_id", None),
         "created_at": expense.created_at,
         "shares": {
             user_id: str(amount)
@@ -99,6 +100,7 @@ def list_group_expenses(
             "description": expense.name,
             "amount": str(expense.amount),
             "paid_by": expense.paid_by,
+            "event_id": expense.event_id,
             "created_at": expense.created_at,
             "shares": shares_by_expense[expense.id],
         }
