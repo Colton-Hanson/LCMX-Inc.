@@ -42,10 +42,17 @@ describe('expenses.js sends the routes the backend expects', () => {
       description: 'Groceries',
       amount: '10.00',
       paid_by: 1,
+      event_id: null,
       participant_ids: [1, 2, 3],
       split_method: 'even',
     });
     expect(result).toEqual({ ok: true, status: 201, data: saved });
+  });
+
+  it('createExpense sends the chosen event_id', async () => {
+    fetchMock.mockResolvedValue(fakeResponse(201, {}));
+    await createExpense({ groupId: 4, description: 'Cabin food', amount: '30.00', paidBy: 1, eventId: 9, participantIds: [1, 2], splitMethod: 'even' });
+    expect(JSON.parse(lastCall()[1].body).event_id).toBe(9);
   });
 
   it('createExpense sends split_values for a custom split', async () => {

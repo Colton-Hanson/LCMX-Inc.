@@ -11,6 +11,7 @@ import UploadStatusCard from '../components/receipt/UploadStatusCard.jsx';
 const GROUPS = [{ id: 1, name: 'Lake House Crew', type: 'outing' }, { id: 2, name: 'Family', type: 'family' }];
 const READ = {
   id: 1,
+  uploader: 1,
   status: 'read',
   store: 'Corner Market',
   receipt_date: '2026-10-03',
@@ -25,6 +26,9 @@ const READ = {
     { id: 8, name: 'Gum', quantity: 1, unit_price: '2.00', line_total: '2.00', position: 7 },
   ],
 };
+// A small sample picture, so the preview never asks the server for one.
+const SAMPLE = { ok: true, status: 200, blob: new Blob(['<svg xmlns="http://www.w3.org/2000/svg" width="240" height="320"><rect width="240" height="320" fill="#e3e8ec"/></svg>'], { type: 'image/svg+xml' }) };
+const loadSample = async () => SAMPLE;
 const LONG_NAME = 'corner-market-grocery-receipt-october-third-twenty-twenty-six-final-scan-version-two.jpg';
 
 // Each state: which card and what it shows.
@@ -36,6 +40,9 @@ const STATES = {
   trouble: { label: 'Reading, connection trouble', step: 2, status: { state: 'waiting', elapsed: 20, problem: true } },
   summary: { label: 'Summary', step: 3, status: { state: 'read', receipt: READ } },
   unreadable: { label: 'Could not read it', step: 2, status: { state: 'failed' } },
+  confirmed: { label: 'Already added to the group', step: 4, status: { state: 'confirmed', receipt: { ...READ, group_id: 1, status: 'confirmed', expense_id: 7 } } },
+  abandoned: { label: 'Abandoned', step: 1, status: { state: 'abandoned' } },
+  picture_gone: { label: 'Summary, delete picture works', step: 3, status: { state: 'read', receipt: READ, removePicture: async () => ({ ok: true, status: 204, data: null }) } },
   wrong_format: { label: 'Wrong format', step: 1, upload: { phase: 'failed', fileName: 'notes.txt', error: { message: 'Only JPEG and PDF receipts are supported.', action: 'Choose a .jpg, .jpeg, or .pdf file.' } } },
   too_large: { label: 'Too large', step: 1, upload: { phase: 'failed', fileName: LONG_NAME, error: { message: 'This file is too large (max 10 MB).', action: 'Choose a smaller file, or take a new photo.' } } },
   corrupt: { label: 'Corrupt file', step: 1, upload: { phase: 'failed', fileName: 'receipt.jpg', error: { message: 'That file could not be read.', action: 'Try another picture, or take a new photo.' } } },
@@ -52,7 +59,7 @@ export default function DevReceiptPreview() {
   return (
     <>
       <nav className="page-wrap" aria-label="Preview states" style={{ paddingBottom: 0 }}>
-        <p className="text-body-secondary mb-0">Preview only (development). <Link to="/home">Back to Home</Link></p>
+        <p className="text-body-secondary mb-0">Preview only (development). <Link to="/home">Back to Home</Link> · <Link to="/dev/sprint7-preview">Sprint 7 screens</Link></p>
         <div className="btn-row">
           {Object.entries(STATES).map(([id, s]) => (
             <button key={id} type="button" className={`btn btn-s ${id === key ? 'btn-tint' : 'btn-ghost'}`} onClick={() => setParams({ state: id })}>{s.label}</button>
@@ -66,7 +73,7 @@ export default function DevReceiptPreview() {
           current.upload ? (
             <UploadStatusCard {...current.upload} percent={current.upload.percent ?? 0} onTryAgain={noop} onChooseAnother={noop} onCancel={noop} />
           ) : (
-            <ReceiptStatusCard fileName={LONG_NAME} receiptId="1" elapsed={0} slow={false} problem={false} onTryAnother={noop} onTakePhoto={noop} onCancel={noop} {...current.status} />
+            <ReceiptStatusCard fileName={LONG_NAME} receiptId="1" myId={1} loadPicture={loadSample} elapsed={0} slow={false} problem={false} onTryAnother={noop} onTakePhoto={noop} onCancel={noop} {...current.status} />
           )
         }
       />

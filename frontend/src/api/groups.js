@@ -42,6 +42,12 @@ export const removeMember = (groupId, userId, confirm = false) =>
 export const createEvent = ({ name, groupId, memberIds }) =>
   request('POST', EVENTS_PATH, { name: String(name ?? '').trim(), group_id: groupId, member_ids: memberIds });
 
+// The groups the signed-in user is an accepted member of: [{ id, name, group_type, created_by, members }].
+export const getMyGroups = () => request('GET', GROUPS_PATH);
+
+// A group's events: [{ id, group_id, name, member_ids }].
+export const getGroupEvents = (groupId) => request('GET', `${GROUPS_PATH}/${groupId}/events`);
+
 // Placeholder: the backend has no route for handing the admin role to someone else yet.
 // When it exists, replace the body with a request and the Group settings page will start using it.
 export const reassignAdmin = async () => ({

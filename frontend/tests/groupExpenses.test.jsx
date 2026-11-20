@@ -37,6 +37,7 @@ beforeEach(() => {
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(members));
   expensesApi.getGroupExpenses.mockResolvedValue(ok([]));
+  groupsApi.getGroupEvents.mockResolvedValue(ok([])); // the Events card on the group page
 });
 
 async function openGroup() {

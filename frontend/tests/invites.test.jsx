@@ -21,6 +21,7 @@ beforeEach(() => {
   localStorage.clear();
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok(invites));
+  groupsApi.getMyGroups.mockResolvedValue(ok([]));
 });
 
 describe('Pending invites on Home', () => {
@@ -140,24 +141,27 @@ describe('Pending invites on Home', () => {
 
 describe('Pending invites on Groups', () => {
   it('shows the invitations above the group cards, with the title visible', async () => {
-    localStorage.setItem('groups:1', JSON.stringify([{ id: 3, name: 'Family', type: 'family' }]));
+    groupsApi.getMyGroups.mockResolvedValue(ok([{ id: 3, name: 'Family', group_type: 'family', created_by: 1, members: [] }]));
     renderApp('/groups');
     const title = await screen.findByRole('heading', { name: 'Pending invites' });
     expect(title).not.toHaveClass('visually-hidden');
-    const cards = screen.getByRole('list', { name: 'Your groups' });
+    const cards = await screen.findByRole('list', { name: 'Your groups' });
     expect(title.compareDocumentPosition(cards) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(cards).getByRole('link', { name: /Family/ })).toHaveAttribute('href', '/groups/3');
   });
 
-  it('accepting adds a card for the group without loading the page again', async () => {
+  // Changed for the real route: after accepting, the groups are asked for again from the server.
+  it('accepting loads the groups from the server again and the new card shows', async () => {
     groupsApi.acceptInvitation.mockResolvedValue(ok({ message: 'Invitation accepted.' }));
+    const joined = { id: 7, name: 'Lake House', group_type: 'outing', created_by: 2, members: [] };
+    groupsApi.getMyGroups.mockResolvedValueOnce(ok([])).mockResolvedValue(ok([joined]));
     const user = userEvent.setup();
     renderApp('/groups');
     await user.click(await screen.findByRole('button', { name: 'Accept invitation to Lake House' }));
     const cards = await screen.findByRole('list', { name: 'Your groups' });
     expect(within(cards).getByRole('link', { name: /Lake House/ })).toHaveAttribute('href', '/groups/7');
     expect(screen.getByText('You joined Lake House.')).toBeInTheDocument();
-    expect(groupsApi.getPendingInvitations).toHaveBeenCalledTimes(1);
+    expect(groupsApi.getMyGroups).toHaveBeenCalledTimes(2);
   });
 });
 

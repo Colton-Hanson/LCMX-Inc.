@@ -25,7 +25,7 @@
 //   1. In api/groups.js add:  export const getMyGroups = () => request('GET', GROUPS_PATH);
 //   2. HomePage.jsx and GroupsPage.jsx: load the groups with getMyGroups() instead of getKnownGroups().
 //   3. Delete the rememberGroup / forgetGroup / useKnownGroup calls (search this repo for "WORKAROUND(no list routes)").
-//   4. Delete this file and lib/eventCache.js, and their lines in README.md.
+//   4. Delete this file and its line in README.md.
 // =====================================================================================================
 
 const keyFor = (userId) => `groups:${userId}`;

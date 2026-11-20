@@ -8,6 +8,9 @@ function colorFor(text) {
   return (sum % COLORS) + 1;
 }
 
+// The color class for a name, for things that match an avatar (the share bar).
+export const avatarClass = (text) => `av-${colorFor(String(text ?? '').trim())}`;
+
 export default function Avatar({ text, large = false }) {
   const value = String(text ?? '').trim();
   const letter = Array.from(value)[0]?.toUpperCase() ?? '?';

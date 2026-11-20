@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { summarizeReceipt } from '../../lib/money.js';
+import { formatCents, summarizeReceipt, toCents } from '../../lib/money.js';
+import { slipDate, slipLines } from '../../lib/receiptMath.js';
+import { KEEP_RULE } from './DeletePicture.jsx';
 import ExpandText from './ExpandText.jsx';
+import MiniReceipt from './MiniReceipt.jsx';
+import PictureSection from './PictureSection.jsx';
 
 const READING_LINES = ['Looking for the store and the date…', 'Finding every item…', 'Matching each item with its price…'];
 const LINE_MS = 4000;
@@ -31,9 +35,11 @@ function ReadingLines() {
 }
 
 // The 'Upload status' card after the file is saved.
-//  state: 'waiting', 'read' or 'failed'
+//  state: 'waiting', 'read', 'failed', 'abandoned' or 'confirmed'
 //  onCancel: forgets this receipt and goes back to the empty upload screen
-export default function ReceiptStatusCard({ state, receipt, fileName, elapsed, slow, problem, receiptId, onTryAnother, onTakePhoto, onCancel }) {
+//  myId, isAdmin: who is looking, for the delete picture button
+//  removePicture, loadPicture: optional delete and fetch calls for the preview page
+export default function ReceiptStatusCard({ state, receipt, fileName, elapsed, slow, problem, receiptId, myId, isAdmin, onTryAnother, onTakePhoto, onCancel, onExpired, removePicture, loadPicture }) {
   const headingRef = useRef(null);
   // Move focus to the heading when the screen changes.
   useEffect(() => {
@@ -64,6 +70,7 @@ export default function ReceiptStatusCard({ state, receipt, fileName, elapsed, s
           </div>
           {slow && <p className="mute sm status-note">This is taking longer than usual. You can keep waiting.</p>}
           {problem && <p className="mute sm status-note">We’re having trouble reaching the server. Still trying.</p>}
+          <p className="mute sm status-note">{KEEP_RULE}</p>
         </div>
       )}
 
@@ -82,6 +89,27 @@ export default function ReceiptStatusCard({ state, receipt, fileName, elapsed, s
             <dt>Total</dt><dd className="money">{summary.total}</dd>
           </dl>
           <p className="mute sm">The AI can make mistakes. You will check every item on the next screen before anything is saved.</p>
+          <MiniReceipt
+            store={receipt?.store}
+            location={receipt?.store_location}
+            date={slipDate(receipt?.receipt_date)}
+            lines={slipLines(receipt?.items ?? [])}
+            total={formatCents((receipt?.items ?? []).reduce((sum, item) => sum + (toCents(item.line_total) ?? 0), 0)).replace('$', '')}
+          />
+          {receipt && <PictureSection receipt={receipt} myId={myId} isAdmin={isAdmin} onExpired={onExpired} load={loadPicture} remove={removePicture} />}
+        </>
+      )}
+
+      {state === 'confirmed' && (
+        <>
+          <div className="srow">
+            <span className="okcircle"><svg className="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+            <div className="srow-body">
+              <p className="title-ok">Already added to the group</p>
+              <p className="mute sm">This receipt was saved as an expense, so there is nothing left to check.</p>
+            </div>
+          </div>
+          {receipt && <PictureSection receipt={receipt} myId={myId} isAdmin={isAdmin} onExpired={onExpired} load={loadPicture} remove={removePicture} />}
         </>
       )}
 
@@ -98,15 +126,27 @@ export default function ReceiptStatusCard({ state, receipt, fileName, elapsed, s
         </div>
       )}
 
+      {state === 'abandoned' && (
+        <div className="srow">
+          <span className="idlecircle" aria-hidden="true" />
+          <div className="srow-body">
+            <p style={{ fontWeight: 700 }}>This receipt was abandoned</p>
+            <p className="mute sm">It wasn’t saved to an expense within 7 days, so its picture was deleted. Upload it again to start over.</p>
+          </div>
+        </div>
+      )}
+
       <div className="btn-row">
         {state === 'read' && <Link className="btn btn-tint" to={`/receipts/${receiptId}/review`}>Check the items</Link>}
+        {state === 'abandoned' && <button className="btn btn-tint" type="button" onClick={onTryAnother}>Upload it again</button>}
+        {state === 'confirmed' && <Link className="btn btn-tint" to={`/groups/${receipt?.group_id}`}>Go to the group</Link>}
         {state === 'failed' && (
           <>
             <button className="btn btn-tint" type="button" onClick={onTryAnother}>Try another picture</button>
             <button className="btn btn-ghost" type="button" onClick={onTakePhoto}>Take a new photo</button>
           </>
         )}
-        {state !== 'failed' && <button className="btn btn-ghost" type="button" onClick={onCancel}>Cancel</button>}
+        {state !== 'failed' && state !== 'abandoned' && state !== 'confirmed' && <button className="btn btn-ghost" type="button" onClick={onCancel}>Cancel</button>}
       </div>
     </section>
   );

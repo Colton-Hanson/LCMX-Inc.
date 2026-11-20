@@ -1,16 +1,18 @@
 // Tests for the Balances screen (SCRUM-85). The API modules are mocked, so no backend is needed. Run with: npm test
 
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
 import * as expensesApi from '../src/api/expenses.js';
+import * as proposedApi from '../src/api/proposed.js';
 import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
 vi.mock('../src/api/expenses.js');
+vi.mock('../src/api/proposed.js', async (original) => ({ ...(await original()), getGroupSettlements: vi.fn(), recordSettlement: vi.fn() }));
 
 const membersByGroup = {
   5: [
@@ -64,20 +66,25 @@ beforeEach(() => {
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockImplementation((id) => Promise.resolve(ok(membersByGroup[id] ?? [])));
   expensesApi.getBalances.mockResolvedValue(ok(reply));
+  proposedApi.getGroupSettlements.mockResolvedValue(fail(405, { detail: 'Method Not Allowed' }));
   expensesApi.getGroupExpenses.mockImplementation((id) => Promise.resolve(ok(expensesByGroup[id] ?? [])));
 });
 
 async function openPage() {
   renderApp('/balances');
   await screen.findByRole('heading', { name: 'Balances', level: 1 });
-  await screen.findByRole('heading', { name: 'Owes you', level: 2 });
+  await screen.findByRole('heading', { name: 'Who owes you', level: 2 });
 }
 
-// The people rows only; a row can also hold a list of its expenses.
-const listItems = (heading) =>
-  within(screen.getByRole('region', { name: heading }))
+// The two total cards switch the list. 'Owes you' and 'You owe' pick the card, then the people rows are read.
+const VIEWS = { 'Owes you': [/^Show who owes you/, 'Who owes you'], 'You owe': [/^Show who you owe/, 'Who you owe'] };
+const listItems = (view) => {
+  const [button, heading] = VIEWS[view];
+  fireEvent.click(screen.getByRole('button', { name: button }));
+  return within(screen.getByRole('region', { name: heading }))
     .getAllByRole('listitem')
     .filter((li) => li.classList.contains('row-item'));
+};
 
 describe('Balances screen', () => {
   it('shows the two totals first', async () => {
@@ -89,7 +96,7 @@ describe('Balances screen', () => {
     expect(within(totals).getByText('−$17.50')).toBeInTheDocument();
   });
 
-  it('keeps who owes you and who you owe in separate lists, biggest first', async () => {
+  it('shows who owes you and who you owe as separate lists, biggest first', async () => {
     await openPage();
     const owes = listItems('Owes you');
     expect(owes).toHaveLength(2);
@@ -140,14 +147,16 @@ describe('Balances screen', () => {
     expect(maya.getByText('Amounts with a minus take away from the total.')).toBeInTheDocument();
   });
 
-  it('shows only the group when the expenses do not add up to the balance', async () => {
+  // Changed for the real backend: after a settlement the lines stay, with a short note.
+  it('keeps the expense lines and says settlements are included when they do not add up to the balance', async () => {
     expensesApi.getGroupExpenses.mockImplementation((id) =>
       Promise.resolve(ok(id === 5 ? [spent(1, 'Groceries', 1, { 2: '20.00' })] : []))
     );
     await openPage();
     const maya = listItems('Owes you')[0];
     expect(maya).toHaveTextContent('Lake House');
-    expect(maya).not.toHaveTextContent('Groceries');
+    expect(maya).toHaveTextContent('Groceries');
+    expect(maya).toHaveTextContent('Settlements are included in the balance.');
   });
 
   it('still shows the balances, without expense lines, when the expenses cannot be loaded', async () => {
@@ -160,9 +169,11 @@ describe('Balances screen', () => {
 
   it('says so when nobody owes you', async () => {
     expensesApi.getBalances.mockResolvedValue(ok({ ...reply, group_balances: [line(5, 3, '0.00', '12.50')] }));
-    await openPage();
-    expect(screen.getByText('Nobody owes you right now.')).toBeInTheDocument();
+    renderApp('/balances');
+    await screen.findByRole('heading', { name: 'Who you owe', level: 2 });
     expect(listItems('You owe')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: /^Show who owes you/ }));
+    expect(screen.getByText('Nobody owes you right now.')).toBeInTheDocument();
   });
 
   it('says you are paid up when every balance is zero', async () => {
@@ -170,7 +181,9 @@ describe('Balances screen', () => {
     await openPage();
     expect(screen.getByText('You’re all paid up.')).toBeInTheDocument();
     expect(screen.getByText('Nobody owes you right now.')).toBeInTheDocument();
-    expect(screen.getByText('You don’t owe anyone right now.')).toBeInTheDocument();
+    const paid = listItems('You owe');
+    expect(paid[0]).toHaveTextContent('You and maya@example.com are paid up');
+    expect(paid[0]).toHaveTextContent('Paid');
   });
 
   it('shows an empty state with a link to add an expense when there are no balances', async () => {
@@ -196,14 +209,14 @@ describe('Balances screen: problems', () => {
     renderApp('/balances');
     await findAlert('We couldn’t load your balances.');
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    expect(await screen.findByRole('heading', { name: 'Owes you', level: 2 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Who owes you', level: 2 })).toBeInTheDocument();
   });
 
   it('shows the same message when a group’s members cannot be loaded', async () => {
     groupsApi.getMembers.mockImplementation((id) => Promise.resolve(id === 6 ? network : ok(membersByGroup[id])));
     renderApp('/balances');
     await findAlert('We couldn’t load your balances.');
-    expect(screen.queryByRole('heading', { name: 'Owes you' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Who owes you' })).not.toBeInTheDocument();
   });
 
   it('sends a logged-out user to log in', async () => {

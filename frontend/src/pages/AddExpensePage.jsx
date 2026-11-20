@@ -1,13 +1,17 @@
 // Add expense screen (SCRUM-83, SCRUM-84): pick a group, enter a title and total, choose who paid and who is in,
 // then split it evenly, by custom amounts or by percentage. Nothing is saved until "Save expense" is pressed.
+// The same form edits an expense (SCRUM-135) when the page is opened with one in the router state.
 import { useEffect, useId, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
 import Message from '../components/Message.jsx';
+import NotAvailable from '../components/NotAvailable.jsx';
 import SplitWho from '../components/SplitWho.jsx';
 import TextField from '../components/TextField.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
 import { createExpense } from '../api/expenses.js';
+import { getGroupEvents } from '../api/groups.js';
+import { isNotAvailable, updateExpense } from '../api/proposed.js';
 import { getKnownGroups } from '../lib/groupCache.js';
 import { parseGroupId, useGroupMembers } from '../lib/groupHooks.js';
 import { defaultBasisPoints, getSplitDefault } from '../lib/splitDefault.js';
@@ -48,11 +52,14 @@ export default function AddExpensePage() {
 
 // Group picker at the top, the expense form underneath. Changing the group switches the form to that group's members and default split.
 function AddExpense({ urlGroupId }) {
-  usePageTitle('Add expense');
+  const stateEdit = useLocation().state?.edit ?? null;
+  const edit = stateEdit && stateEdit.group_id === urlGroupId ? stateEdit : null; // the expense being edited, if any
+  const heading = edit ? 'Edit expense' : 'Add expense';
+  usePageTitle(heading);
   const { profile } = useAuth();
   const groupFieldId = useId(); // links the Group label to its dropdown
-  const [title, setTitle] = useState(''); // kept here so changing the group does not clear them
-  const [totalText, setTotalText] = useState('');
+  const [title, setTitle] = useState(edit?.description ?? ''); // kept here so changing the group does not clear them
+  const [totalText, setTotalText] = useState(edit ? String(edit.amount) : '');
 
   // WORKAROUND(no list routes): START. The group list is the one this browser has saved. See lib/groupCache.js.
   const known = getKnownGroups(profile.id);
@@ -88,11 +95,13 @@ function AddExpense({ urlGroupId }) {
           ← {group.name}
         </Link>
         <div className="add-top">
-          <h1>Add expense</h1>
-          <div className="seg how-seg" role="group" aria-label="How to add">
-            <span className="on" aria-current="page">Enter by hand</span>
-            <Link to={`/receipts/new?group=${group.id}`}>Scan a receipt</Link>
-          </div>
+          <h1>{heading}</h1>
+          {!edit && (
+            <div className="seg how-seg" role="group" aria-label="How to add">
+              <span className="on" aria-current="page">Enter by hand</span>
+              <Link to={`/receipts/new?group=${group.id}`}>Scan a receipt</Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -104,6 +113,7 @@ function AddExpense({ urlGroupId }) {
             id={groupFieldId}
             className="form-select form-select-lg"
             value={groupId}
+            disabled={Boolean(edit)}
             onChange={(e) => setGroupId(Number(e.target.value))}
           >
             {groups.map((g) => (
@@ -117,6 +127,7 @@ function AddExpense({ urlGroupId }) {
       <ExpenseForm
         key={group.id}
         group={group}
+        edit={edit}
         title={title}
         setTitle={setTitle}
         totalText={totalText}
@@ -134,18 +145,25 @@ function percentTexts(saved, ids) {
 }
 
 // The expense form for one group.
-function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
+function ExpenseForm({ group, edit, title, setTitle, totalText, setTotalText }) {
   const groupId = group.id;
   const saved = getSplitDefault(groupId); // the group's default split, set in Group settings
   const navigate = useNavigate();
   const { profile, onExpired } = useAuth();
   const { status, members, reload } = useGroupMembers(groupId); // accepted members of the group
   const paidById = useId(); // links the Paid by label to its dropdown
+  const eventFieldId = useId();
+  const eventHelpId = useId();
+  const editOffId = useId();
 
-  const [payerId, setPayerId] = useState(null); // who paid; null means you
-  const [picked, setPicked] = useState(null); // user ids in the split; null means everyone
-  const [method, setMethod] = useState(saved.method); // 'even' | 'custom' | 'percentage'; starts on the group's default
-  const [values, setValues] = useState(null); // typed amounts or percentages, by user id; null until something is typed
+  // Editing starts from the saved expense: who paid, who is in, and each person's amount.
+  const [payerId, setPayerId] = useState(edit?.paid_by ?? null); // who paid; null means you
+  const [picked, setPicked] = useState(edit ? Object.keys(edit.shares ?? {}).map(Number) : null); // user ids in the split; null means everyone
+  const [method, setMethod] = useState(edit ? 'custom' : saved.method); // 'even' | 'custom' | 'percentage'; starts on the group's default
+  const [values, setValues] = useState(edit ? { ...(edit.shares ?? {}) } : null); // typed amounts or percentages, by user id; null until something is typed
+  const [events, setEvents] = useState([]); // the group's events, for the event picker
+  const [eventId, setEventId] = useState(edit?.event_id != null ? String(edit.event_id) : ''); // the chosen event, '' for none
+  const [editOff, setEditOff] = useState(false); // the server can't save edits yet
   const [titleError, setTitleError] = useState('');
   const [totalError, setTotalError] = useState('');
   const [splitBlocked, setSplitBlocked] = useState(false); // true after Save was pressed with a split that does not add up
@@ -157,6 +175,17 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
   useEffect(() => {
     if (focusTick) formRef.current?.querySelector('[aria-invalid="true"]')?.focus();
   }, [focusTick]);
+
+  // The event picker is optional, so a failed load just leaves it out.
+  useEffect(() => {
+    let cancelled = false;
+    getGroupEvents(groupId)?.then?.((res) => {
+      if (!cancelled && res?.ok && Array.isArray(res.data)) setEvents(res.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId]);
 
   const allIds = members.map((m) => m.user_id);
   const participantIds = picked === null ? allIds : allIds.filter((id) => picked.includes(id)); // chosen people, in member order
@@ -194,6 +223,16 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
 
   const setValue = (id, text) => setValues({ ...shownValues, [id]: text }); // stores what was typed for one person
 
+  // Picking an event puts its members in the split. "No event" puts everyone back in.
+  function chooseEvent(value) {
+    setEventId(value);
+    const event = events.find((ev) => String(ev.id) === value);
+    setPicked(event ? allIds.filter((id) => event.member_ids.includes(id)) : null);
+    setValues(null);
+    if (method === 'custom') setMethod('even');
+    setSplitBlocked(false);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitError('');
@@ -213,11 +252,13 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
     }
 
     setSubmitting(true);
-    const res = await createExpense({
+    const send = edit ? (body) => updateExpense(edit.id, body) : createExpense;
+    const res = await send({
       groupId,
       description: title,
       amount: formatCents(totalCents),
       paidBy,
+      eventId: eventId === '' ? null : Number(eventId),
       participantIds,
       splitMethod: method,
       splitValues: splitValuesForRequest({ method, memberIds: participantIds, values: shownValues, shares: split.shares }),
@@ -226,13 +267,18 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
       onExpired();
       return;
     }
+    if (edit && isNotAvailable(res)) {
+      setSubmitting(false);
+      setEditOff(true);
+      return;
+    }
     if (!res.ok) {
       setSubmitting(false);
       setSubmitError(messageFromResult(res, 'We couldn’t save the expense. Please try again.'));
       return;
     }
     const count = participantIds.length;
-    const text = `Expense “${res.data.description}” saved: ${formatMoney(totalCents)} shared by ${count} ${count === 1 ? 'person' : 'people'}.`;
+    const text = `Expense “${res.data?.description ?? title.trim()}” ${edit ? 'updated' : 'saved'}: ${formatMoney(totalCents)} shared by ${count} ${count === 1 ? 'person' : 'people'}.`;
     navigate(`/groups/${groupId}`, { state: { group, notices: [{ kind: 'ok', text }] } });
   }
 
@@ -252,7 +298,7 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
   const noneAreInvalid = split.invalidIds.length === 0; // true when every typed number can be read
 
   return (
-    <form className="add-form" onSubmit={handleSubmit} noValidate aria-label="Add expense" ref={formRef}>
+    <form className="add-form" onSubmit={handleSubmit} noValidate aria-label={edit ? 'Edit expense' : 'Add expense'} ref={formRef}>
       <section className="panel add-expense" aria-labelledby="expense-title">
       <h2 id="expense-title">The expense</h2>
       <TextField
@@ -299,6 +345,25 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
               ))}
             </select>
           </div>
+
+          {events.length > 0 && (
+            <div className="field">
+              <label htmlFor={eventFieldId} className="form-label fw-semibold">Event <span className="fw-normal text-body-secondary">(optional)</span></label>
+              <select
+                id={eventFieldId}
+                className="form-select form-select-lg"
+                value={eventId}
+                aria-describedby={eventHelpId}
+                onChange={(e) => chooseEvent(e.target.value)}
+              >
+                <option value="">No event</option>
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                ))}
+              </select>
+              <p id={eventHelpId} className="text-body-secondary small mt-1 mb-0">Picking an event puts its members in the split.</p>
+            </div>
+          )}
 
           <fieldset className="plain">
             <legend>Who is in this expense?</legend>
@@ -456,10 +521,11 @@ function ExpenseForm({ group, title, setTitle, totalText, setTotalText }) {
         <Message kind="error" alert>Can’t save yet. {split.message}</Message>
       )}
       {submitError && <Message kind="error" alert>{submitError}</Message>}
+      {editOff && <NotAvailable id={editOffId}>Editing an expense isn’t available yet. Nothing was changed.</NotAvailable>}
 
       <div className="btn-row">
-        <button type="submit" className="btn btn-tint" disabled={submitting || status !== 'ready'}>
-          {submitting ? 'Saving expense…' : 'Save expense'}
+        <button type="submit" className="btn btn-tint" disabled={submitting || status !== 'ready' || editOff} aria-describedby={editOff ? editOffId : undefined}>
+          {submitting ? 'Saving expense…' : edit ? 'Save changes' : 'Save expense'}
         </button>
         <Link className="btn btn-ghost" to={`/groups/${groupId}`} state={{ group }}>Cancel</Link>
       </div>

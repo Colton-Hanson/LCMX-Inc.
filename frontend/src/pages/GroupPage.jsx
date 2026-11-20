@@ -4,7 +4,7 @@ import Avatar from '../components/Avatar.jsx';
 import Message from '../components/Message.jsx';
 import RecentExpenses from '../components/RecentExpenses.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
-import { getKnownEvents } from '../lib/eventCache.js';
+import { getGroupEvents } from '../api/groups.js';
 import { parseGroupId, useGroupMembers, useKnownGroup } from '../lib/groupHooks.js';
 import { typeLabel } from '../lib/groupTypes.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
@@ -30,7 +30,7 @@ export default function GroupPage() {
 }
 
 function GroupDetails({ groupId }) {
-  const { profile } = useAuth();
+  const { profile, onExpired } = useAuth();
   const { state, pathname } = useLocation();
   const navigate = useNavigate();
   const group = useKnownGroup(groupId);
@@ -45,10 +45,22 @@ function GroupDetails({ groupId }) {
     if (state?.notices) navigate(pathname, { replace: true, state: { group: state.group } });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // WORKAROUND(no list routes): START. There is no "list events" route, so the Events card shows only events THIS browser created.
-  // Remove when the backend can list a group's events. See lib/eventCache.js.
-  const events = getKnownEvents(profile.id, groupId);
-  // WORKAROUND(no list routes): END
+  // The group's events come from the server.
+  const [eventsState, setEventsState] = useState({ status: 'loading', list: [] }); // status: 'loading' | 'ready' | 'error'
+  const [eventsAttempt, setEventsAttempt] = useState(0);
+  useEffect(() => {
+    let cancelled = false; // ignore the reply if the page was closed first
+    getGroupEvents(groupId).then((res) => {
+      if (cancelled) return;
+      if (res.status === 401) return onExpired();
+      if (!res.ok || !Array.isArray(res.data)) return setEventsState({ status: 'error', list: [] });
+      setEventsState({ status: 'ready', list: res.data });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId, eventsAttempt, onExpired]);
+  const events = eventsState.list;
 
   if (status === 'denied') {
     return <Unavailable>You can’t open this group. It may not exist, or you may not be an accepted member.</Unavailable>;
@@ -94,20 +106,30 @@ function GroupDetails({ groupId }) {
             <p className="text-body-secondary mb-0">
               An event is a smaller circle inside the group, for expenses only some members share.
             </p>
-            {/* WORKAROUND(no list routes): the events list below is fed by this browser's saved events (lib/eventCache.js). */}
-            {events.length > 0 && (
+            {eventsState.status === 'loading' && <p className="text-body-secondary mt-3 mb-0" role="status">Loading events…</p>}
+            {eventsState.status === 'error' && (
+              <div className="d-flex flex-column align-items-start gap-3 mt-3">
+                <Message kind="error" alert>We couldn’t load the events. Check your connection and try again.</Message>
+                <button type="button" className="btn btn-ghost" onClick={() => setEventsAttempt((n) => n + 1)}>Try again</button>
+              </div>
+            )}
+            {eventsState.status === 'ready' && events.length > 0 && (
               <ul className="list-unstyled m-0 mt-3">
-                {events.map((ev) => (
-                  <li key={ev.id} className="row-item">
-                    <Avatar text={ev.name} />
-                    <span className="row-grow">
-                      <span className="row-title">{ev.name}</span>
-                      <span className="d-block text-body-secondary small">
-                        {ev.all ? 'All members' : `${ev.count} ${ev.count === 1 ? 'member' : 'members'}`}
+                {events.map((ev) => {
+                  const count = ev.member_ids.length;
+                  const all = status === 'ready' && count === members.length;
+                  return (
+                    <li key={ev.id} className="row-item">
+                      <Avatar text={ev.name} />
+                      <span className="row-grow">
+                        <span className="row-title">{ev.name}</span>
+                        <span className="d-block text-body-secondary small">
+                          {all ? 'All members' : `${count} ${count === 1 ? 'member' : 'members'}`}
+                        </span>
                       </span>
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>

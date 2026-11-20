@@ -1,14 +1,21 @@
 // Recent expenses card for the group page: the newest expenses of the group, from GET /groups/{id}/expenses.
 // Each row shows the title, who paid, the date, the total and your own share, and opens to everyone's share.
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+// Tapping the title opens the details. Edit and Delete show only for people allowed to change the expense.
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Avatar from './Avatar.jsx';
+import ExpenseActions from './ExpenseActions.jsx';
+import ExpenseDialog from './ExpenseDialog.jsx';
+import ExpandText from './receipt/ExpandText.jsx';
 import Message from './Message.jsx';
 import { useAuth } from './RequireAuth.jsx';
 import { getGroupExpenses } from '../api/expenses.js';
 import { FORMER_MEMBER } from '../lib/balances.js';
+import { canChangeExpense } from '../lib/expensePermissions.js';
 import { formatMoney, toCents } from '../lib/splits.js';
 import '../groupExpenses.css';
+import '../receipt.css';
+import '../sprint7.css';
 
 const SHOWN = 5; // how many expenses the card lists
 
@@ -26,8 +33,18 @@ const money = (amount) => {
 
 // members      the group's accepted members [{ user_id, email }] (used to turn paid_by into an email)
 // membersReady false until the member list has loaded
-export default function RecentExpenses({ groupId, group, members, membersReady }) {
+// load, remove  the list and delete calls (the preview page passes its own)
+export default function RecentExpenses({ groupId, group, members, membersReady, load = getGroupExpenses, remove }) {
   const { profile, onExpired } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(null); // { expense, del } for the details dialog
+  const [note, setNote] = useState('');
+  const noteRef = useRef(null);
+  const isAdmin = members.some((m) => m.user_id === profile.id && m.is_admin);
+
+  useEffect(() => {
+    if (note) noteRef.current?.focus();
+  }, [note]);
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
   const [expenses, setExpenses] = useState([]);
   const [attempt, setAttempt] = useState(0);
@@ -35,7 +52,7 @@ export default function RecentExpenses({ groupId, group, members, membersReady }
   useEffect(() => {
     let cancelled = false; // ignore the reply if the page was closed first
     setStatus('loading');
-    getGroupExpenses(groupId).then((res) => {
+    load(groupId).then((res) => {
       if (cancelled) return;
       if (res.ok) {
         setExpenses(res.data);
@@ -49,7 +66,7 @@ export default function RecentExpenses({ groupId, group, members, membersReady }
     return () => {
       cancelled = true;
     };
-  }, [groupId, attempt, onExpired]);
+  }, [groupId, attempt, onExpired, load]);
 
   const emails = Object.fromEntries(members.map((m) => [m.user_id, m.email]));
   const payerEmail = (id) => (id === profile.id ? profile.email : emails[id] ?? FORMER_MEMBER);
@@ -64,6 +81,7 @@ export default function RecentExpenses({ groupId, group, members, membersReady }
   return (
     <section className="panel" aria-labelledby="expenses-title">
       <h2 id="expenses-title">Recent expenses</h2>
+      {note && <Message kind="ok" role="status" boxRef={noteRef} tabIndex={-1}>{note}</Message>}
 
       {(status === 'loading' || (status === 'ready' && !membersReady)) && (
         <p className="text-body-secondary mb-0" role="status">Loading expenses…</p>
@@ -94,17 +112,27 @@ export default function RecentExpenses({ groupId, group, members, membersReady }
               const name = payerName(e.paid_by);
               const share = e.shares?.[profile.id];
               const people = splitPeople(e);
+              const allowed = canChangeExpense({ expense: e, myId: profile.id, isAdmin });
               return (
                 <li className="row-item" key={e.id}>
                   <Avatar text={payerEmail(e.paid_by)} />
                   <div className="row-grow">
-                    <span className="row-title">{e.description}</span>
+                    <ExpandText className="row-title">
+                      <button type="button" className="exp-open" aria-haspopup="dialog" onClick={() => setOpen({ expense: e, del: false })}>{e.description}</button>
+                    </ExpandText>
                     <span className="row-sub">{`${name} paid. ${shortDate(e.created_at)}`.trim()}</span>
                   </div>
                   <div className="exp-amount-col">
                     <span className="exp-amount">{money(e.amount)}</span>
                     <span className="row-sub">{share === undefined ? 'Not in this split' : `Your share ${money(share)}`}</span>
                   </div>
+                  {allowed && (
+                    <ExpenseActions
+                      title={e.description}
+                      onEdit={() => navigate(`/groups/${groupId}/expenses/new`, { state: { group, edit: e } })}
+                      onDelete={() => setOpen({ expense: e, del: true })}
+                    />
+                  )}
                   {people.length > 1 && (
                     <details className="exp-split">
                       <summary>{`Split between ${people.length} people`}</summary>
@@ -126,6 +154,25 @@ export default function RecentExpenses({ groupId, group, members, membersReady }
             <p className="text-body-secondary small mb-0">{`Showing the ${SHOWN} newest of ${expenses.length}.`}</p>
           )}
         </>
+      )}
+      {open && (
+        <ExpenseDialog
+          key={`${open.expense.id}-${open.del}`}
+          expense={open.expense}
+          groupName={group?.name ?? 'this group'}
+          nameOf={payerName}
+          canChange={canChangeExpense({ expense: open.expense, myId: profile.id, isAdmin })}
+          startOnDelete={open.del}
+          remove={remove}
+          onEdit={(e) => navigate(`/groups/${groupId}/expenses/new`, { state: { group, edit: e } })}
+          onDeleted={(e) => {
+            setOpen(null);
+            setNote(`Expense “${e.description}” deleted. Balances are updated.`);
+            setAttempt((n) => n + 1);
+          }}
+          onExpired={onExpired}
+          onClose={() => setOpen(null)}
+        />
       )}
     </section>
   );

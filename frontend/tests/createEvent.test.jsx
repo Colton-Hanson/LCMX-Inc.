@@ -26,6 +26,7 @@ beforeEach(() => {
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(members));
+  groupsApi.getGroupEvents.mockResolvedValue(ok([]));
 });
 
 const createButton = () => screen.getByRole('button', { name: 'Create event' });
@@ -86,8 +87,9 @@ describe('Create event screen', () => {
     expect(groupsApi.createEvent).toHaveBeenCalledWith({ name: 'Camping', groupId: 5, memberIds: [1, 3] });
   });
 
-  it('lists the new event on the group page, with who is in it', async () => {
+  it('lists the new event on the group page from the server, with who is in it', async () => {
     groupsApi.createEvent.mockResolvedValue(ok({ id: 2, group_id: 5, name: 'Camping', member_ids: [1, 3] }, 201));
+    groupsApi.getGroupEvents.mockResolvedValue(ok([{ id: 2, group_id: 5, name: 'Camping', member_ids: [1, 3] }]));
     const user = userEvent.setup();
     await openPage();
     await user.type(screen.getByLabelText('Event name'), 'Camping');
@@ -97,18 +99,20 @@ describe('Create event screen', () => {
     await user.click(createButton());
     expect(await screen.findByText('Event “Camping” created for 2 members.')).toBeInTheDocument();
     const events = screen.getByRole('region', { name: 'Events' });
-    expect(within(events).getByText('Camping')).toBeInTheDocument();
+    expect(await within(events).findByText('Camping')).toBeInTheDocument();
     expect(within(events).getByText('2 members')).toBeInTheDocument();
+    expect(groupsApi.getGroupEvents).toHaveBeenCalledWith(5);
   });
 
-  it('lists an all-members event as "All members" and keeps it after a reload', async () => {
+  it('lists an all-members event as "All members" and still shows it after a reload', async () => {
     groupsApi.createEvent.mockResolvedValue(ok({ id: 3, group_id: 5, name: 'Housewarming', member_ids: [1, 2, 3] }, 201));
+    groupsApi.getGroupEvents.mockResolvedValue(ok([{ id: 3, group_id: 5, name: 'Housewarming', member_ids: [1, 2, 3] }]));
     const user = userEvent.setup();
     await openPage();
     await user.type(screen.getByLabelText('Event name'), 'Housewarming');
     await user.click(createButton());
     await screen.findByText('Event “Housewarming” created for 3 members.');
-    expect(within(screen.getByRole('region', { name: 'Events' })).getByText('All members')).toBeInTheDocument();
+    expect(await within(screen.getByRole('region', { name: 'Events' })).findByText('All members')).toBeInTheDocument();
 
     document.body.innerHTML = '';
     renderApp('/groups/5');

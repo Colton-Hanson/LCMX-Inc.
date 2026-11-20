@@ -5,8 +5,8 @@ export const POLL_MS = 2000; // how often we check
 export const SLOW_AFTER_SECONDS = 90; // then show the taking longer note
 const FAILS_BEFORE_NOTICE = 3; // bad checks in a row before the connection message
 
-// Keeps checking one receipt until it's read, failed or missing.
-//  state: 'waiting', 'read' or 'failed'
+// Keeps checking one receipt until it's read, failed, abandoned, confirmed or missing.
+//  state: 'waiting', 'read', 'failed', 'abandoned' or 'confirmed'
 //  receipt: latest one from the server
 //  elapsed: seconds waited
 //  slow: waited past 90 seconds
@@ -40,7 +40,7 @@ export function useReceiptStatus(receiptId, onExpired, onMissing) {
         setProblem(false);
         setReceipt(result.data);
         const status = result.data?.status;
-        if (status === 'read' || status === 'failed') {
+        if (status === 'read' || status === 'failed' || status === 'abandoned' || status === 'confirmed') {
           setState(status);
           return;
         }

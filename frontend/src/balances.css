@@ -8,8 +8,8 @@
 /* The two totals side by side, stacked on phones */
 .bal-totals { display: flex; flex-wrap: wrap; gap: 24px; }
 .panel.bal-total { flex: 1 1 240px; gap: 4px; }
-.bal-label { margin: 0; color: var(--text-muted); font-size: 0.875rem; }
-.bal-value { margin: 0; font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bal-label { display: block; margin: 0; color: var(--text-muted); font-size: 0.875rem; }
+.bal-value { display: block; margin: 0; font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Owes you and You owe lists: side by side when there is room */
 .bal-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 24px; align-items: start; }

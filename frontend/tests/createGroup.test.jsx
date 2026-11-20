@@ -23,6 +23,8 @@ beforeEach(() => {
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(members));
+  groupsApi.getMyGroups.mockResolvedValue(ok([]));
+  groupsApi.getGroupEvents.mockResolvedValue(ok([]));
 });
 
 const nameBox = () => screen.getByLabelText('Group name');
@@ -202,16 +204,43 @@ describe('Group page', () => {
 });
 
 describe('Groups list', () => {
-  it('lists remembered groups with a Create group button', async () => {
-    localStorage.setItem('groups:1', JSON.stringify([{ id: 3, name: 'Family', type: 'family' }]));
+  const server = (id, name, type) => ({ id, name, group_type: type, created_by: 1, members: [] });
+
+  it('lists the groups from the server with a Create group button, not from saved browser data', async () => {
+    groupsApi.getMyGroups.mockResolvedValue(ok([server(3, 'Family', 'family'), server(8, 'Lake Weekend', 'outing')]));
+    localStorage.setItem('groups:1', JSON.stringify([{ id: 99, name: 'Old saved', type: 'family' }])); // must be ignored
     renderApp('/groups');
     expect(await screen.findByRole('heading', { name: 'Groups', level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Family/ })).toHaveAttribute('href', '/groups/3');
+    expect(await screen.findByRole('link', { name: /Family/ })).toHaveAttribute('href', '/groups/3');
+    expect(screen.getByRole('link', { name: /Lake Weekend/ })).toHaveAttribute('href', '/groups/8');
+    expect(screen.queryByText('Old saved')).not.toBeInTheDocument();
+    expect(groupsApi.getMyGroups).toHaveBeenCalled();
     expect(screen.getByRole('link', { name: 'Create group' })).toHaveAttribute('href', '/groups/new');
+  });
+
+  it('shows a loading line while it waits', async () => {
+    groupsApi.getMyGroups.mockReturnValue(new Promise(() => {}));
+    renderApp('/groups');
+    expect(await screen.findByText('Loading your groups…')).toBeInTheDocument();
+  });
+
+  it('offers Try again when the groups cannot be loaded', async () => {
+    groupsApi.getMyGroups.mockResolvedValueOnce(network).mockResolvedValue(ok([server(3, 'Family', 'family')]));
+    const user = userEvent.setup();
+    renderApp('/groups');
+    await findAlert('We couldn’t load your groups.');
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('link', { name: /Family/ })).toBeInTheDocument();
+  });
+
+  it('sends a logged-out user to log in', async () => {
+    groupsApi.getMyGroups.mockResolvedValue(fail(401));
+    renderApp('/groups');
+    expect(await screen.findByRole('heading', { name: 'Log in' })).toBeInTheDocument();
   });
 
   it('shows an empty message when there are none', async () => {
     renderApp('/groups');
-    expect(await screen.findByText(/No groups on this device yet/)).toBeInTheDocument();
+    expect(await screen.findByText(/You’re not in a group yet/)).toBeInTheDocument();
   });
 });

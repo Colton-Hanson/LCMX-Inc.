@@ -1,4 +1,4 @@
-// Tests for scanning a receipt: Home pop-up, upload, reading, summary, error cards and the placeholder. APIs are mocked.
+// Tests for scanning a receipt: Home pop-up, upload, reading, summary, error cards and the way into the review screen. APIs are mocked.
 
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -39,6 +39,7 @@ beforeEach(() => {
   authApi.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   receiptsApi.getReceipt.mockResolvedValue(ok(saved));
+  receiptsApi.getReceiptPicture.mockResolvedValue({ ok: true, status: 200, blob: new Blob(['jpeg'], { type: 'image/jpeg' }) });
 });
 
 describe('Scan a receipt pop-up on Home', () => {
@@ -200,8 +201,9 @@ describe('Reading and summary screen', () => {
     expect(screen.getByRole('button', { name: 'Choose a file' })).toBeDisabled();
   });
 
-  it('shows the store, date, item count and total once it is read, and Check the items opens the placeholder page', async () => {
+  it('shows the store, date, item count and total once it is read, and Check the items opens the review screen', async () => {
     receiptsApi.getReceipt.mockResolvedValue(ok(readReceipt));
+    groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: 'cole@umkc.edu', is_admin: true }]));
     const user = userEvent.setup();
     renderApp('/receipts/9', { fileName: 'corner-market.jpg' });
 
@@ -217,9 +219,8 @@ describe('Reading and summary screen', () => {
     expect(check).toHaveAttribute('href', '/receipts/9/review');
     await user.click(check);
 
-    expect(await screen.findByRole('heading', { level: 2, name: 'Check the items' })).toBeInTheDocument();
-    expect(screen.getByText(/This screen comes next/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to the receipt' })).toHaveAttribute('href', '/receipts/9');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Check your receipt' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'What the AI found' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cancel' })).toHaveAttribute('href', '/home');
   });
 
@@ -235,6 +236,18 @@ describe('Reading and summary screen', () => {
     expect(within(card).getByText('Upload successful')).toBeInTheDocument(); // upload row stays
     expect(within(card).queryByRole('link', { name: 'Enter by hand' })).not.toBeInTheDocument(); // the toggle already has it
     expect(within(card).queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+  });
+
+  it('says a confirmed receipt is already added to the group, with no review link, and stops checking', async () => {
+    receiptsApi.getReceipt.mockResolvedValue(ok({ ...readReceipt, status: 'confirmed', expense_id: 31 }));
+    renderApp('/receipts/9');
+    expect(await screen.findByText('Already added to the group')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to the group' })).toHaveAttribute('href', '/groups/5');
+    expect(screen.queryByRole('link', { name: 'Check the items' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+    expect(screen.getByText('This receipt is already added to the group.')).toBeInTheDocument(); // read out politely
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(receiptsApi.getReceipt).toHaveBeenCalledTimes(1);
   });
 
   it('uploads a new picture from the could-not-read screen and moves to its receipt', async () => {
@@ -300,11 +313,13 @@ describe('Reading and summary screen', () => {
   });
 });
 
-describe('Check the items placeholder', () => {
+describe('Check the items screen', () => {
   it('opens directly from its address with the third step current', async () => {
+    receiptsApi.getReceipt.mockResolvedValue(ok(readReceipt));
+    groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: 'cole@umkc.edu', is_admin: true }]));
     renderApp('/receipts/9/review');
-    expect(await screen.findByRole('heading', { level: 2, name: 'Check the items' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Add expense' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'What the AI found' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Check your receipt' })).toBeInTheDocument();
     expect(document.querySelector('[aria-current="step"]')).toHaveTextContent('Check and assign');
   });
 });

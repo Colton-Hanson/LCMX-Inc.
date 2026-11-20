@@ -7,6 +7,8 @@ export function messageFromResult(result, fallback) {
 
   const detail = result.data?.detail;
   if (typeof detail === 'string') return detail;
+  // Some errors come as { code, message, action }.
+  if (typeof detail?.message === 'string' && detail.message) return detail.message;
   if (Array.isArray(detail)) {
     // Validation errors arrive as a list; messages start with "Value error, " which is not user-friendly.
     const text = detail

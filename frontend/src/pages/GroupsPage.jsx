@@ -1,21 +1,36 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';
+import Message from '../components/Message.jsx';
 import PendingInvites from '../components/PendingInvites.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
-import { getKnownGroups } from '../lib/groupCache.js';
+import { getMyGroups } from '../api/groups.js';
 import { typeLabel } from '../lib/groupTypes.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
 
-// Everyone you share expenses with: invitations waiting for an answer, then the groups this browser knows about, plus a way to create a new one.
-// (The backend has no "list my groups" route yet, so the list comes from groups created or joined on this device.)
+// Everyone you share expenses with: invitations waiting for an answer, then your groups from the server, plus a way to create a new one.
 export default function GroupsPage() {
   usePageTitle('Groups');
-  const { profile } = useAuth();
-  // WORKAROUND(no list routes): START. The full list comes from this browser's saved list, not the server (no GET /groups).
-  // So it is empty on a new browser or computer even for someone who is in groups. See lib/groupCache.js.
-  const [groups, setGroups] = useState(() => getKnownGroups(profile.id));
-  // WORKAROUND(no list routes): END
+  const { onExpired } = useAuth();
+  const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+  const [groups, setGroups] = useState([]);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false; // ignore the reply if the page was closed first
+    getMyGroups().then((res) => {
+      if (cancelled) return;
+      if (res.status === 401) return onExpired();
+      if (!res.ok || !Array.isArray(res.data)) return setStatus('error');
+      setGroups(res.data);
+      setStatus('ready');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [attempt, onExpired]);
+
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
   return (
     <main className="page-wrap">
@@ -27,22 +42,33 @@ export default function GroupsPage() {
         <Link className="btn btn-tint d-inline-flex align-items-center justify-content-center" to="/groups/new">Create group</Link>
       </div>
 
-      <PendingInvites onJoined={setGroups} />
+      <PendingInvites onJoined={reload} />
 
-      {groups.length === 0 ? (
+      {status === 'loading' && <p className="text-body-secondary mb-0" role="status">Loading your groups…</p>}
+
+      {status === 'error' && (
+        <div className="d-flex flex-column align-items-start gap-3">
+          <Message kind="error" alert>We couldn’t load your groups. Check your connection and try again.</Message>
+          <button type="button" className="btn btn-ghost" onClick={reload}>Try again</button>
+        </div>
+      )}
+
+      {status === 'ready' && groups.length === 0 && (
         <section className="panel">
           <p className="text-body-secondary mb-0">
-            No groups on this device yet. Create one, or accept an invitation, and it shows up here.
+            You’re not in a group yet. Create one, or accept an invitation, and it shows up here.
           </p>
         </section>
-      ) : (
+      )}
+
+      {status === 'ready' && groups.length > 0 && (
         <ul className="group-grid" aria-label="Your groups">
           {groups.map((g) => (
             <li key={g.id}>
-              <Link className="group-card" to={`/groups/${g.id}`} state={{ group: g }}>
+              <Link className="group-card" to={`/groups/${g.id}`} state={{ group: { id: g.id, name: g.name, type: g.group_type } }}>
                 <span className="group-card-top">
                   <Avatar text={g.name} large />
-                  <span className="pill">{typeLabel(g.type)}</span>
+                  <span className="pill">{typeLabel(g.group_type)}</span>
                 </span>
                 <span className="group-card-name">{g.name}</span>
               </Link>

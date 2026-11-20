@@ -3,11 +3,13 @@ import { useEffect, useId, useRef } from 'react';
 // A modal dialog. While it is open, Tab stays inside it, Escape closes it, and focus goes back to the button that
 // opened it afterwards. Mark one button with data-autofocus to choose where focus starts (default: the first control).
 //   title     the heading, which also names the dialog for screen readers
+//   description  optional line under the heading, read out with it
 //   onClose   called on Escape
 const FOCUSABLE = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])';
 
-export default function Dialog({ title, onClose, children }) {
+export default function Dialog({ title, description, onClose, children }) {
   const titleId = useId();
+  const descId = useId();
   const boxRef = useRef(null);
   const onCloseRef = useRef(onClose); // keeps the effect below from restarting when the parent re-renders
   onCloseRef.current = onClose;
@@ -44,8 +46,9 @@ export default function Dialog({ title, onClose, children }) {
 
   return (
     <div className="scrim">
-      <div className="dlg" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={boxRef}>
+      <div className="dlg" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descId : undefined} ref={boxRef}>
         <h2 id={titleId} className="h4 mb-0">{title}</h2>
+        {description && <p id={descId} className="text-body-secondary">{description}</p>}
         {children}
       </div>
     </div>

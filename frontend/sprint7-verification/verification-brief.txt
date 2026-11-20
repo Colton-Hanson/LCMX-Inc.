@@ -1,0 +1,52 @@
+VERIFICATION BRIEF: SPRINT 7 FRONTEND (trimmed copy made from the main build log; the main log was not changed)
+Updated Nov 19 2026 to the final state of the build. Source of truth for anything missing here: the main build log and frontend/SPRINT7_FINDINGS.md.
+
+YOUR JOB IN THIS REVIEW
+You are a careful reviewer. You verify the finished Sprint 7 frontend work and report what is right, what is wrong and what could not be checked. You are not rebuilding anything. Do not ask the project owner questions; take the simplest sensible reading, say which you took, and keep going. Do the looking-up and checking before you answer; never say you did not check something, check it first.
+
+HARD RULES (carried over from the build)
+1. Read only. Change nothing in the project folders unless the owner says so. No git add, commit, push, branch change or merge. Read-only git commands (status, diff, log) are fine.
+2. Never touch the backend code, GitHub or Jira. Backend routes may be read through the backend's docs page only.
+3. No tool names, personal names, or test logins in any repo file.
+4. Your own notes go in your own workspace, never inside the project folders.
+5. Plain numbered lines in replies, no tables, short, spell out an acronym the first time.
+6. Only the literal word GO from the owner starts any new work beyond verification.
+
+WHERE THINGS ARE
+Frontend app: the frontend folder at the repo root (branch frontend-sprint7, all work uncommitted).
+Design mockup (read only): the Dark Scheme UI concept mockup folder, kept outside the repo. The mockup wins wherever it shows a screen; the tickets and current app decide only where it shows nothing.
+Handoff document: frontend/SPRINT7_FRONTEND_HANDOFF.md (what was built, the real routes, how to run). Findings: frontend/SPRINT7_FINDINGS.md (team summary, reader results, limitations, backend suggestions).
+Test copy of the stack for click-through: database on port 5433, backend on http://127.0.0.1:8001, frontend dev server on http://localhost:5174 (it forwards /api to the 8001 backend). Dev-only preview page: /dev/sprint7-preview (a drop-down of every state). The older receipt preview is /dev/receipt-preview.
+Screenshots (zipped) are in this folder as sprint7-screenshots.zip (an earlier set made during the build).
+
+WHAT WAS BUILT (four tickets, hand tested at 320, 375 and 1280 wide)
+1. SCRUM-136 Settle up: Balances screen to the mockup layout, Pay and Mark received, settle dialog (full or part, cents validation, confirm step), "Received (manual)" pill, settlement history merged from every group, wording that the app does not move money. Records through POST /groups/{id}/settlements and reads GET /groups/{id}/settlements. The server's own messages show for over-paying, self-pay, non-member, not a party and not owing.
+2. SCRUM-137 Delete picture: the real picture (GET /receipts/{id}/picture) shows under the drawn slip, or a "Picture removed" box on 404. Delete (DELETE /receipts/{id}/picture) is for the uploader or a group admin, only once the receipt is not uploaded or reading. The dialog says the items are kept.
+3. SCRUM-135 Edit and delete expense: admin only, as the server allows (one named switch in src/lib/expensePermissions.js widens it). Details dialog on row tap; edit reuses the Add Expense layout; PUT and DELETE /expenses/{id}; the server's 403 and 409 messages show; event_id is sent on add and edit and starts filled in when editing.
+4. SCRUM-134 Review and assign: editable items (PUT /receipts/{id}/items, ids refreshed from each reply); assign each item to people; "Not assigned yet" flag; live shares in cents; optional event; Save confirms the receipt through POST /receipts/{id}/confirm with shares that add up to each item's total to the cent; a confirmed receipt shows "Already added to the group" and polling stops.
+"Not available yet" now shows only when the server cannot be reached, or answers 405 or 501. Every other error shows the server's own message. The guessed routes in src/api/proposed.js are now the real ones.
+
+CONFIRMED RESULTS (fresh run, Nov 19 2026, from a terminal with an upper-case drive letter)
+1. Frontend tests: 32 test files, 524 tests, all passing (baseline before Sprint 7 was 28 files and 358 tests; the earlier Sprint 7 build had 494).
+2. Production build: succeeds (110 modules). Neither preview page is in it.
+3. Reader (stand-in, outside the repo): 32 tests pass. Test copy of the backend: 256 of 258 pass; the 2 misses check Unix file permissions and only fail on Windows.
+4. Flows A to F were walked in a real browser against the test copy: A add, edit with event, delete; B settle up part then rest with real server errors; C non-admin sees no Edit or Delete and a direct 403 shows the server message; D upload, read, review, assign, confirm to the cent; E delete picture and the 409 cases; F the receipt-linked expense gives the server's 409. All passed.
+5. Accessibility scans in the new tests pass; the changed screens show no sideways scroll at 320, 375 and 1280.
+6. Old tests and the shared helper still contain a personal sample name from earlier sprints (not changed; to report).
+
+KNOWN GAPS (not frontend faults; do not call these failures)
+1. Backend/database: the real seed script never creates balance rows, so preloaded starter expenses are not counted in balances. A fixed copy is only in the test copy of the stack.
+2. The expense list has no created-by field and no receipt-link flag, and edit and delete are admin only, so the frontend cannot hide Edit and Delete ahead of time for receipt-linked expenses; the server's 409 message shows instead.
+3. Receipts stay at "uploaded" until something reads them. A stand-in reader (outside the repo) was used for the tests; it is not part of the backend yet.
+4. A receipt picture cannot be attached to a hand-entered expense in the app (no ticket asks for it).
+5. One account's group page title can show "Group" because the group name still comes from a browser-saved list (older workaround, not in these tickets).
+
+HOW TO VERIFY (suggested order, keep each step short and report pass or fail)
+1. Read the handoff document and the findings file, then read-only git status and diff on the branch; confirm nothing is outside frontend.
+2. Run the full test suite in frontend and compare with 32 files and 524 tests. Run it from a terminal whose folder path uses an upper-case drive letter.
+3. Search the new files for tool names, personal names and test logins; check comments are short and plain.
+4. Open the frontend and walk the preview page states for each ticket.
+5. In the real app check Balances, the settle dialog and its error messages, the expense details dialog, Edit and Delete visibility for an admin and for a plain member, Add Expense with an event, the receipt upload, review and confirm, the picture delete and the "Picture removed" state.
+6. Check 320, 375 and 1280 widths for no sideways scroll, 44px touch targets, centered button text, focus ring and keyboard-only use.
+7. Compare each screen with the mockup and list differences that are not deliberate.
+8. Finish with a short numbered report: passed, failed, could not check (with what you tried).

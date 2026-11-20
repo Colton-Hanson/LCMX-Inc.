@@ -14,18 +14,20 @@ import { API_PREFIX, request } from './http.js';
 //   splitValues   { userId: "amount" or "percent" } for custom and percentage; leave out for even
 // Success is 201 with { id, group_id, description, amount, paid_by, created_at, shares, rounding_adjusted_member_ids }
 // where shares is { userId: "3.34" }. A 422 carries data.detail as a plain sentence for a split that does not add up.
-export const createExpense = ({ groupId, description, amount, paidBy, participantIds, splitMethod, splitValues }) =>
+//   eventId       optional id of one of the group's events
+export const createExpense = ({ groupId, description, amount, paidBy, eventId, participantIds, splitMethod, splitValues }) =>
   request('POST', `${API_PREFIX}/expenses`, {
     group_id: groupId,
     description: String(description ?? '').trim(),
     amount: String(amount),
     paid_by: paidBy,
+    event_id: eventId ?? null,
     participant_ids: participantIds,
     split_method: splitMethod,
     split_values: splitValues,
   });
 
-// A group's expenses, newest first: [{ id, group_id, description, amount, paid_by, created_at, shares }].
+// A group's expenses, newest first: [{ id, group_id, description, amount, paid_by, event_id, created_at, shares }].
 // Accepted members only; anyone else gets a 403.
 export const getGroupExpenses = (groupId) => request('GET', `${API_PREFIX}/groups/${groupId}/expenses`);
 

@@ -32,6 +32,7 @@ beforeEach(() => {
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(members));
   expensesApi.getGroupExpenses.mockResolvedValue(ok([])); // the group page the user returns to lists the expenses
+  groupsApi.getGroupEvents.mockResolvedValue(ok([])); // and its Events card
 });
 
 const saveButton = () => screen.getByRole('button', { name: 'Save expense' });
@@ -115,6 +116,7 @@ describe('Even split', () => {
       description: '  Groceries  ',
       amount: '10.00',
       paidBy: 1,
+      eventId: null,
       participantIds: [1, 2, 3],
       splitMethod: 'even',
       splitValues: undefined,

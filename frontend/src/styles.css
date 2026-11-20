@@ -120,6 +120,10 @@ h1 { letter-spacing: 0.01em; }
   --bs-btn-border-radius: 8px;
   min-height: 48px; /* Minimum touch target size. */
   font-weight: 700;
+  /* Keeps the words in the middle of the button, side to side and top to bottom. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .btn.btn-lg { font-size: 1.0625rem; }
 .btn-primary {
