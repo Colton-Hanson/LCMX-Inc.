@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import EmailField from '../components/EmailField.jsx';
+import { avatarClass } from '../components/Avatar.jsx';
 import PasswordField from '../components/PasswordField.jsx';
 import PasswordRules from '../components/PasswordRules.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
@@ -33,6 +34,7 @@ export default function SettingsPage() {
   return (
     <main className="settings-wrap">
       <div>
+        <Link className="back-link" to="/home">← Home</Link>
         <h1 className="mb-1">Settings</h1>
         <p className="text-body-secondary mb-0">Your profile, sign-in details and notifications.</p>
       </div>
@@ -197,7 +199,7 @@ function ProfileCard({ profile, onProfile, onExpired }) {
     <SettingsCard id="profile" title="Profile">
       {/* Photo upload isn't built yet, so the button is turned off and says why. */}
       <div className="d-flex flex-wrap align-items-center gap-3 mb-3">
-        <span className="account-avatar avatar-lg" aria-hidden="true">{initial}</span>
+        <span className={`account-avatar avatar-lg ${avatarClass(profile.name || profile.email)}`} aria-hidden="true">{initial}</span>
         <div>
           <button type="button" className="btn btn-ghost" disabled aria-describedby="photo-note">
             Upload a photo

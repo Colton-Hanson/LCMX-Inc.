@@ -13,7 +13,7 @@
 
 /* Page header: title and the "How to add" switch */
 .rc-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
-.rcpt .seg a, .rcpt .seg span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: transparent; color: var(--mute); font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.rcpt .seg > a, .rcpt .seg > span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: transparent; color: var(--mute); font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .rcpt .seg a:hover { color: var(--ink); }
 .rcpt .seg .on { background: var(--sf); color: var(--ink); box-shadow: 0 0 0 2px var(--pri); }
 

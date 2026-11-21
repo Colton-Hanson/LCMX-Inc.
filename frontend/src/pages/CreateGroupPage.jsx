@@ -7,7 +7,6 @@ import Message from '../components/Message.jsx';
 import TextField from '../components/TextField.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
 import { createGroup, inviteMember } from '../api/groups.js';
-import { rememberGroup } from '../lib/groupCache.js';
 import { DEFAULT_GROUP_TYPE, GROUP_TYPES } from '../lib/groupTypes.js';
 import { messageFromResult } from '../lib/apiErrors.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
@@ -119,10 +118,6 @@ export default function CreateGroupPage() {
     }
 
     const group = { id: res.data.id, name: res.data.name, type: res.data.group_type };
-    // WORKAROUND(no list routes): START. The backend can't list "my groups", so remember this new group in this browser.
-    // Without this line the group would be missing from the Home and Groups pages. See lib/groupCache.js.
-    rememberGroup(profile.id, group);
-    // WORKAROUND(no list routes): END
     const notices = await sendInvites(group.id, toInvite);
     if (notices === null) {
       onExpired();

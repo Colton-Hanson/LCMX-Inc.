@@ -6,7 +6,7 @@ import { vi } from 'vitest';
 import * as authApi from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
 import * as receiptsApi from '../src/api/receipts.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
@@ -14,7 +14,7 @@ vi.mock('../src/api/receipts.js');
 
 const lake = { id: 5, name: 'Lake House', type: 'outing' };
 const flat = { id: 6, name: 'Apartment 4B', type: 'roommate' };
-const saveGroups = (...list) => localStorage.setItem('groups:1', JSON.stringify(list));
+const saveGroups = (...list) => mockGroups(groupsApi, list);
 
 const saved = { id: 9, group_id: 5, uploader: 1, status: 'uploaded', file_type: 'image/jpeg', size: 3 };
 const readReceipt = {
@@ -203,7 +203,7 @@ describe('Reading and summary screen', () => {
 
   it('shows the store, date, item count and total once it is read, and Check the items opens the review screen', async () => {
     receiptsApi.getReceipt.mockResolvedValue(ok(readReceipt));
-    groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: 'cole@umkc.edu', is_admin: true }]));
+    groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: 'sam@umkc.edu', is_admin: true }]));
     const user = userEvent.setup();
     renderApp('/receipts/9', { fileName: 'corner-market.jpg' });
 
@@ -212,7 +212,7 @@ describe('Reading and summary screen', () => {
     expect(found).toHaveTextContent('StoreCorner Market');
     expect(found).toHaveTextContent('DateOct 3, 2026');
     expect(found).toHaveTextContent('Items2 found');
-    expect(found).toHaveTextContent('Total$8.00');
+    expect(found).toHaveTextContent('Items subtotal$8.00');
     expect(screen.getByRole('status')).toHaveTextContent('Done: 2 items found');
 
     const check = screen.getByRole('link', { name: 'Check the items' });
@@ -316,7 +316,7 @@ describe('Reading and summary screen', () => {
 describe('Check the items screen', () => {
   it('opens directly from its address with the third step current', async () => {
     receiptsApi.getReceipt.mockResolvedValue(ok(readReceipt));
-    groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: 'cole@umkc.edu', is_admin: true }]));
+    groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: 'sam@umkc.edu', is_admin: true }]));
     renderApp('/receipts/9/review');
     expect(await screen.findByRole('heading', { level: 2, name: 'What the AI found' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Check your receipt' })).toBeInTheDocument();

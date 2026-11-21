@@ -10,7 +10,7 @@ describe('validateEmail', () => {
     expect(validateEmail('a b@c.com')).not.toBe(''); // contains a space
   });
   it('accepts a valid email', () => {
-    expect(validateEmail('cole@umkc.edu')).toBe(''); // '' means "no error"
+    expect(validateEmail('sam@umkc.edu')).toBe(''); // '' means "no error"
   });
 });
 
@@ -37,7 +37,7 @@ describe('validateConfirm', () => {
 
 describe('validateName', () => {
   it('accepts a normal name and trims spaces', () => {
-    expect(validateName('  Cole Hanson ')).toBe('');
+    expect(validateName('  Sam Rivera ')).toBe('');
   });
   it('rejects a blank name', () => {
     expect(validateName('')).toBe('Enter your name.');

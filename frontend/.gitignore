@@ -21,5 +21,8 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+# Sprint 7 review notes and screenshots. Kept on disk only, not committed.
+sprint7-verification/
+
 # Claude Code's local instruction file. Cole's choice: keep it on his machine, don't share it with the team.
 CLAUDE.md

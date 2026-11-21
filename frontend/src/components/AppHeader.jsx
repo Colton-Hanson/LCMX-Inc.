@@ -4,6 +4,7 @@ import Icon from './Icons.jsx';
 import Logo from './Logo.jsx';
 import { logoutUser } from '../api/auth.js';
 import { initialsFor } from '../lib/initials.js';
+import { avatarClass } from './Avatar.jsx';
 import '../topbar.css';
 
 const APP_NAME = 'Shared Expense Management Tool';
@@ -33,7 +34,7 @@ export default function AppHeader({ user, loading = false }) {
       {signedIn && (
         <Link className="btn btn-tint app-add" to="/expenses/new">
           <Icon name="plus" size={18} />
-          <span className="app-add-text">Add expense</span>
+          <span className="app-add-text">Add <span className="cap">expense</span></span>
         </Link>
       )}
       {user && <AccountMenu user={user} />}
@@ -93,7 +94,7 @@ function AccountMenu({ user }) {
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((o) => !o)}
       >
-        <span className="account-avatar">{initial}</span>
+        <span className={`account-avatar ${avatarClass(user.name || user.email)}`}>{initial}</span>
         <span className="visually-hidden">Account menu</span>
         <svg className="account-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
           <path d="M6 9l6 6 6-6" />

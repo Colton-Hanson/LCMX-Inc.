@@ -1,7 +1,7 @@
 // Tests for the check and assign screen (SCRUM-134): the share math, editing items, picking people,
 // saving the items and the expense, and every state the screen can be in. The API modules are mocked.
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import * as api from '../src/api/auth.js';
@@ -11,7 +11,7 @@ import * as receiptsApi from '../src/api/receipts.js';
 import { lineCents, shareTotals, splitEvenly, toQuantity } from '../src/lib/receiptMath.js';
 import { buildAssignments } from '../src/components/receipt/ReceiptReview.jsx';
 import { checkA11y } from './a11y.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
@@ -35,7 +35,7 @@ const receipt = {
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
-  localStorage.setItem('groups:1', JSON.stringify([group]));
+  mockGroups(groupsApi, [group]);
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(members));
@@ -151,7 +151,7 @@ describe('Check and assign: what it shows', () => {
     await openReview();
     expect(within(row('Milk')).getByRole('button', { name: 'Who is in on Milk: Everyone (3)' })).toBeInTheDocument();
     // 7.00 -> 2.34 2.33 2.33, 4.25 -> 1.43 1.41 1.41, 1.00 -> 0.34 0.33 0.33
-    expect(shareRows()).toEqual(['Ssam@example.com (you)34%$4.11', 'Mmaya@example.com33%$4.07', 'Ddevin@example.com33%$4.07']);
+    expect(shareRows()).toEqual(['SSam (you)34%$4.11', 'MMaya33%$4.07', 'DDevin33%$4.07']);
     const totals = screen.getByText('Split between people').closest('dl');
     expect(totals).toHaveTextContent('Receipt total$12.25');
     expect(totals).toHaveTextContent('Left out (not assigned)$0.00');
@@ -161,7 +161,7 @@ describe('Check and assign: what it shows', () => {
   it('shows the mini receipt, the picture and the delete picture button', async () => {
     await openReview();
     expect(screen.getByRole('group', { name: 'Receipt: Corner Market, 10/03/26, 3 items, total 12.25' })).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: 'Photo of the receipt from Corner Market' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Photo of the receipt from Corner Market/ })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Delete receipt picture' })).toBeInTheDocument();
   });
 
@@ -174,6 +174,7 @@ describe('Check and assign: what it shows', () => {
 
   it('has no accessibility problems', async () => {
     const user = await openReview();
+    await screen.findByRole('button', { name: /Photo of the receipt/ }); // wait for the picture to load, so it doesn't land after the test ends
     expect(await checkA11y()).toHaveNoViolations();
     await user.click(screen.getByRole('button', { name: 'Who is in on Gum: Everyone (3)' }));
     await user.click(within(screen.getByRole('group', { name: 'Who is in on Gum' })).getByRole('button', { name: 'None' }));
@@ -186,13 +187,13 @@ describe('Check and assign: picking people', () => {
     const user = await openReview();
     await user.click(screen.getByRole('button', { name: 'Who is in on Bread: Everyone (3)' }));
     const panel = screen.getByRole('group', { name: 'Who is in on Bread' });
-    const devin = within(panel).getByRole('button', { name: 'devin@example.com' });
+    const devin = within(panel).getByRole('button', { name: 'Devin' });
     expect(devin).toHaveAttribute('aria-pressed', 'true');
     await user.click(devin);
     expect(devin).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Who is in on Bread: 2 of 3' })).toHaveAttribute('aria-expanded', 'true');
     // Bread 4.25 between two -> 2.13 and 2.12
-    expect(shareRows()).toEqual(['Ssam@example.com (you)39%$4.81', 'Mmaya@example.com39%$4.78', 'Ddevin@example.com22%$2.66']);
+    expect(shareRows()).toEqual(['SSam (you)39%$4.81', 'MMaya39%$4.78', 'DDevin22%$2.66']);
   });
 
   it('has None, Everyone and Done on each item', async () => {
@@ -225,8 +226,8 @@ describe('Check and assign: picking people', () => {
     await user.click(screen.getByRole('button', { name: 'Who is in on Milk: Everyone (3)' }));
     const panel = screen.getByRole('group', { name: 'Who is in on Milk' });
     await user.type(within(panel).getByLabelText('Search people'), 'may');
-    expect(within(panel).getByRole('button', { name: 'maya@example.com' })).toBeInTheDocument();
-    expect(within(panel).queryByRole('button', { name: 'devin@example.com' })).not.toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: 'Maya' })).toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: 'Devin' })).not.toBeInTheDocument();
     await user.type(within(panel).getByLabelText('Search people'), 'zzz');
     expect(within(panel).getByText('Nobody matches that search.')).toBeInTheDocument();
   });
@@ -235,11 +236,11 @@ describe('Check and assign: picking people', () => {
     const user = await openReview();
     await user.click(screen.getByRole('button', { name: 'Who is on this receipt: Everyone (3)' }));
     const panel = screen.getByRole('group', { name: 'Who is on this receipt' });
-    await user.click(within(panel).getByRole('button', { name: 'devin@example.com' }));
+    await user.click(within(panel).getByRole('button', { name: 'Devin' }));
     expect(screen.getByRole('button', { name: 'Who is on this receipt: 2 of 3' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Who is in on Milk: Everyone (2)' })).toBeInTheDocument();
-    expect(shareRows()).toEqual(['Ssam@example.com (you)50%$6.13', 'Mmaya@example.com50%$6.12']);
-    await user.click(within(panel).getByRole('button', { name: 'devin@example.com' }));
+    expect(shareRows()).toEqual(['SSam (you)50%$6.13', 'MMaya50%$6.12']);
+    await user.click(within(panel).getByRole('button', { name: 'Devin' }));
     expect(screen.getByRole('button', { name: 'Who is in on Milk: Everyone (3)' })).toBeInTheDocument();
   });
 
@@ -251,8 +252,7 @@ describe('Check and assign: picking people', () => {
     const panel = screen.getByRole('group', { name: 'Who is in on Milk' });
     await user.tab();
     expect(within(panel).getByLabelText('Search people')).toHaveFocus();
-    await user.tab();
-    await user.tab();
+    await user.tab(); // one Everyone/None button now (it says None while everyone is in)
     expect(within(panel).getByRole('button', { name: 'None' })).toHaveFocus();
     await user.keyboard(' ');
     expect(screen.getByRole('button', { name: 'Who is in on Milk: Nobody' })).toBeInTheDocument();
@@ -372,10 +372,10 @@ describe('Check and assign: saving and cancelling', () => {
     for (const name of ['Milk', 'Bread']) {
       await user.click(screen.getByRole('button', { name: new RegExp(`^Who is in on ${name}:`) }));
       const panel = screen.getByRole('group', { name: `Who is in on ${name}` });
-      await user.click(within(panel).getByRole('button', { name: 'devin@example.com' }));
+      await user.click(within(panel).getByRole('button', { name: 'Devin' }));
       await user.click(within(panel).getByRole('button', { name: 'Done' }));
     }
-    await user.selectOptions(screen.getByLabelText('Paid by'), 'maya@example.com');
+    await user.selectOptions(screen.getByLabelText('Paid by'), 'Maya');
     await user.clear(screen.getByLabelText('Store'));
     await user.type(screen.getByLabelText('Store'), 'Groceries run');
     await user.click(screen.getByRole('button', { name: 'Save expense' }));
@@ -504,9 +504,13 @@ describe('Check and assign: saving and cancelling', () => {
 });
 
 describe('Check and assign: when the receipt is not ready', () => {
+  // The login check and the receipt answer arrive right after the page is drawn. Draw it inside an async act(), so
+  // React sees those updates as part of the test and doesn't print "not wrapped in act(...)" warnings.
   const open = async (data) => {
     receiptsApi.getReceipt.mockResolvedValue(data);
-    renderApp('/receipts/9/review');
+    await act(async () => {
+      renderApp('/receipts/9/review');
+    });
   };
 
   it('shows a loading line while it waits', async () => {

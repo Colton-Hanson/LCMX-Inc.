@@ -1,36 +1,10 @@
-// Tests for the group default split helpers (lib/splitDefault.js). Run with: npm test
+// Tests for the group default split helpers (lib/splitDefault.js). The default itself comes from the server. Run with: npm test
 
-import { checkPercents, defaultBasisPoints, EVEN_DEFAULT, getSplitDefault, saveSplitDefault } from '../src/lib/splitDefault.js';
+import { checkPercents, defaultBasisPoints, EVEN_DEFAULT } from '../src/lib/splitDefault.js';
 
-beforeEach(() => localStorage.clear());
-
-describe('saving and reading the default', () => {
-  it('is even when nothing is saved', () => {
-    expect(getSplitDefault(5)).toEqual(EVEN_DEFAULT);
-  });
-
-  it('gives back what was saved, per group', () => {
-    const saved = { method: 'percentage', percents: { 1: 7000, 2: 3000 } };
-    expect(saveSplitDefault(5, saved)).toBe(true);
-    expect(getSplitDefault(5)).toEqual(saved);
-    expect(getSplitDefault(6)).toEqual(EVEN_DEFAULT);
-  });
-
-  it('treats damaged data as even', () => {
-    localStorage.setItem('splitDefault:5', 'not json');
-    expect(getSplitDefault(5)).toEqual(EVEN_DEFAULT);
-    localStorage.setItem('splitDefault:5', JSON.stringify({ method: 'percentage', percents: { 1: 'x' } }));
-    expect(getSplitDefault(5)).toEqual(EVEN_DEFAULT);
-    localStorage.setItem('splitDefault:5', JSON.stringify({ method: 'percentage', percents: { 1: 10001 } }));
-    expect(getSplitDefault(5)).toEqual(EVEN_DEFAULT);
-  });
-
-  it('returns false when the browser will not store it', () => {
-    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('blocked');
-    });
-    expect(saveSplitDefault(5, EVEN_DEFAULT)).toBe(false);
-    spy.mockRestore();
+describe('EVEN_DEFAULT', () => {
+  it('is an even split with no percentages, the same shape the server sends', () => {
+    expect(EVEN_DEFAULT).toEqual({ method: 'even', percents: {} });
   });
 });
 

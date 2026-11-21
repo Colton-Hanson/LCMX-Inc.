@@ -14,15 +14,16 @@
 .dlg-title-row { display: flex; flex-direction: column; gap: 2px; }
 
 /* ---------- Balances ---------- */
-.bal-tab { position: relative; flex: 1 1 240px; min-width: 0; padding: 0; gap: 0; transition: border-color .15s, box-shadow .15s; }
+.panel.bal-tab { position: relative; flex: 1 1 240px; min-width: 0; padding: 0; gap: 0; transition: border-color .15s, box-shadow .15s; }
 .bal-tab.is-on { border-color: var(--teal); box-shadow: 0 0 0 1px var(--teal); }
-.bal-tab-btn { display: flex; flex-direction: column; gap: 4px; width: 100%; min-height: 96px; padding: 24px; border: 0; border-radius: 12px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.bal-both { position: absolute; top: 14px; right: 14px; min-height: 44px; padding: 0 12px; font-size: .875rem; }
+.bal-tab-btn { display: flex; flex-direction: column; align-items: stretch; gap: 2px; width: 100%; min-height: 0; padding: 14px 20px 16px; border: 0; border-radius: 12px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bal-both { position: absolute; top: 8px; right: 10px; min-height: 44px; padding: 0 12px; font-size: .875rem; }
 .bal-both[aria-pressed='true'] { border-color: var(--teal); color: var(--teal-link); }
 .bal-both .ic { width: 16px; height: 16px; }
-.bal-cols { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
-.bal-cols > .bal-main { flex: 1 1 600px; min-width: 0; }
-.bal-cols > .bal-hist { flex: 1 1 320px; min-width: 0; }
+/* The two cards and the two columns share one split, so their edges line up on a desktop. Stacked when narrow. */
+.bal-cols { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.bal-cols > .bal-main, .bal-cols > .bal-hist { min-width: 0; }
+@media (max-width: 900px) { .s7 .bal-cols, .s7 .bal-totals { grid-template-columns: minmax(0, 1fr); } }
 .bal-row .row-grow { flex: 1 1 180px; }
 .bal-row .rc-expand > p { margin: 0; }
 .bal-mute { color: var(--text-muted); }
@@ -30,13 +31,17 @@
 .bal-side .bal-amount { margin-left: 0; }
 .bal-foot { margin: 0; color: var(--text-muted); font-size: .875rem; }
 
-/* Mark received: a check box button. Yellow pill when you marked it yourself, green when paid. */
-.chk { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: .875rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
-.chk:hover { background: var(--raised); }
-.chk .box { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px solid var(--text-muted); border-radius: 5px; }
-.pill-state { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 28px; padding: 2px 10px; border: 1px solid currentColor; border-radius: 999px; font-size: .8125rem; font-weight: 600; white-space: nowrap; }
+/* Mark received, copied from the mockup: a plain check box, then a yellow outlined pill once you tick it
+   (press the pill to undo). The green pills (Payment received, Paid) only show what the server has, so they are not buttons. */
+.chk { position: relative; display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px; min-width: 156px; min-height: 44px; padding: 6px 4px; border: 0; border-radius: 999px; background: none; color: inherit; font: inherit; font-size: .875rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.chk .box { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 2px solid var(--line); border-radius: 5px; }
+.chk.man { justify-content: center; gap: 4px; min-height: 0; padding: 2px 10px; border: 1px solid currentColor; color: var(--manual); font-size: .8125rem; }
+.chk.man::after { content: ''; position: absolute; inset: -9px 0; } /* keeps a 44px tall target around the slim pill */
+.chk .ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pill-state { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 92px; padding: 2px 10px; border: 1px solid currentColor; border-radius: 999px; font-size: .8125rem; font-weight: 600; white-space: nowrap; }
 .pill-state .ic { width: 16px; height: 16px; }
-.pill-manual { color: var(--manual); }
+.pill-manual { min-width: 156px; color: var(--manual); }
+.pill-received { min-width: 156px; color: var(--money-in); }
 .pill-paid { color: #86efac; }
 
 /* Settlement history */
@@ -63,8 +68,8 @@
   .dlg .btn-row { gap: 10px; }
   .dlg .btn-row .btn { flex: 1 1 auto; padding-inline: 10px; font-size: .9375rem; }
   .s7 .panel { padding: 18px; }
-  .bal-tab { padding: 0; }
-  .bal-tab-btn { padding: 18px; }
+  .s7 .panel.bal-tab { padding: 0; }
+  .bal-tab-btn { padding: 14px 16px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .bal-tab { transition: none; }
@@ -87,12 +92,30 @@
 /* Settle amount choice: the two buttons share a row, or each takes a full row on a narrow phone */
 .settle-seg { display: flex; }
 .settle-seg button { flex: 1 1 auto; white-space: nowrap; }
+/* The picture as a button that opens the zoom pop-up */
+.pic-open { position: relative; display: block; width: 100%; max-width: 340px; margin: 0 auto; padding: 0; border: 0; background: transparent; color: inherit; cursor: zoom-in; border-radius: 8px; }
+.pic-open:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.pic-hint { position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .75rem; pointer-events: none; }
+.dlg.dlg--wide { max-width: min(96vw, 960px); max-height: 94vh; }
+.pic-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pic-zoom { min-width: 3.5rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: .875rem; }
+.pic-close { margin-left: auto; }
+.pic-tip { color: var(--text-muted); font-size: .8125rem; }
+.pic-scroll.is-zoomed { cursor: grab; }
+.pic-scroll.is-zoomed:active { cursor: grabbing; }
+@media (max-width: 520px) { .pic-tip { display: none; } }
+.dlg .pic-btn { min-height: 36px; padding: 2px 12px; font-size: .875rem; font-weight: 400; }
+.pic-scroll { overflow: auto; max-height: calc(94vh - 130px); border: 1px solid var(--line); border-radius: 8px; background: var(--raised); touch-action: pan-x pan-y pinch-zoom; }
+.pic-scroll:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.pic-big { display: block; max-width: none; height: auto; margin: 0 auto; }
 .pic-img { display: block; width: 100%; max-width: 340px; max-height: 360px; margin: 0 auto; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); }
 .pic-gone { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 64px; padding: 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--text-muted); text-align: center; }
 
 /* ---------- Expense rows: open, edit, delete ---------- */
-.exp-open { display: inline; padding: 10px 0; margin: -10px 0; border: 0; background: none; color: inherit; font: inherit; font-weight: inherit; text-align: left; cursor: pointer; }
-.exp-open:hover { color: var(--teal-link); text-decoration: underline; }
+/* An expense title is a button that opens the details, so it looks like a link: teal, a little bolder, underlined */
+.exp-open { display: inline; padding: 10px 0; margin: -10px 0; border: 0; background: none; color: var(--teal-link); font: inherit; font-weight: 600; text-align: left; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: pointer; transition: opacity 0.12s, text-decoration-thickness 0.12s; }
+.exp-open:hover { text-decoration-thickness: 2px; }
+.exp-open:active { opacity: 0.7; }
 .exp-actions { flex: none; display: inline-flex; align-items: center; gap: 4px; }
 .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; }
 .icon-btn:hover { background: var(--raised); color: var(--text); }
@@ -124,8 +147,27 @@
 .pk-panel { flex: 1 1 100%; grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .pk-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .pk-search { flex: 1 1 120px; min-height: 44px; padding: .25rem .75rem; font-size: 1rem; }
-.pk-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 156px; overflow-y: auto; padding: 2px; }
-.pk-list p { margin: 0; }
+/* People list: a grid of equal boxes (5 across, 2 on a phone), like the mockup */
+.pk-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-height: 156px; overflow-y: auto; padding: 2px; }
+.pk-list p { margin: 0; grid-column: 1 / -1; }
+.pk-cell { position: relative; display: flex; min-width: 0; }
+.pk-list .pchip { width: 100%; height: 100%; min-height: 48px; border-radius: 12px; }
+/* A name stays on one line (alice@examp...). When it is cut off, a caret opens the whole name over more lines. */
+.pk-list .pchip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.15; text-align: left; }
+.pk-cell.has-more .pchip { padding-right: 38px; }
+.pk-cell.is-open .pchip-name { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.pk-more { position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 48px; padding: 0; border: 0; border-radius: 0 12px 12px 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+.pk-more:hover { color: var(--text); }
+.pk-more:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.pk-more .ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.pk-more[aria-expanded='true'] .ic { transform: rotate(180deg); }
+/* Fewer boxes across on smaller screens so the avatar and name sit side by side (a 428px phone is not "under 420") */
+@media (max-width: 900px) {
+  .pk-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .pk-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .pchip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-height: 44px; padding: 4px 12px 4px 6px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--text-muted); font: inherit; font-size: .875rem; cursor: pointer; }
 .pchip .av { width: 28px; height: 28px; font-size: .7rem; opacity: .45; }
 .pchip.is-on { border-color: var(--teal); color: var(--text); }

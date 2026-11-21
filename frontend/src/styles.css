@@ -444,6 +444,14 @@ a.account-item { display: flex; align-items: center; text-decoration: none; }
 .av-3 { background: var(--avatar-3); }
 .av-4 { background: var(--avatar-4); }
 .av-5 { background: var(--avatar-5); }
+/* Two letters need a little less size to fit the circle */
+.av--two { font-size: 0.72em; letter-spacing: -0.02em; }
+/* The round picture in the top bar and on Settings takes the same colour as the person's other avatars */
+.account-avatar.av-1 { background: var(--avatar); }
+.account-avatar.av-2 { background: var(--avatar-2); }
+.account-avatar.av-3 { background: var(--avatar-3); }
+.account-avatar.av-4 { background: var(--avatar-4); }
+.account-avatar.av-5 { background: var(--avatar-5); }
 
 /* Small rounded label (group type, Admin, Member, Pending). */
 .pill {
@@ -506,6 +514,12 @@ a.row-item:hover .row-title { color: var(--teal-link); }
   font-weight: 600;
 }
 .msg .ic { margin-top: 2px; }
+/* The grey X that closes a message (only when the page gives it an onClose) */
+.msg-text { flex: 1 1 auto; }
+.msg .msg-close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: -4px -6px -4px 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.msg .msg-close .ic { margin-top: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.msg .msg-close:hover { background: rgba(255, 255, 255, .08); color: var(--text); }
+.msg .msg-close:focus-visible { outline: 3px solid var(--focus); outline-offset: 0; }
 .msg-text { min-width: 0; overflow-wrap: anywhere; }
 .msg-text p { margin: 0; }
 .msg-text p + p { margin-top: 4px; }
@@ -597,10 +611,14 @@ button.chip { cursor: pointer; text-align: left; }
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 96px 16px 16px;
+  padding: 16px;
   background: rgba(10, 16, 22, 0.65);
   overflow-y: auto;
+  animation: scrim-in 0.12s ease-out;
 }
+@keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dlg-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .scrim, .dlg { animation: none; } }
 .dlg {
   width: 100%;
   max-width: 500px;
@@ -613,6 +631,8 @@ button.chip { cursor: pointer; text-align: left; }
   border: 1px solid var(--line);
   border-radius: 14px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  margin: auto; /* centred on the screen, and starts at the top (still scrollable) when taller than the screen */
+  animation: dlg-in 0.12s ease-out;
 }
 .dlg p { margin: 0; }
 

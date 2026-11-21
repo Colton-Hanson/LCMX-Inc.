@@ -7,14 +7,13 @@ import Logo from './Logo.jsx';
 import Message from './Message.jsx';
 import { useAuth } from './RequireAuth.jsx';
 import { getPendingInvitations, acceptInvitation, declineInvitation } from '../api/groups.js';
-import { rememberGroup } from '../lib/groupCache.js';
 import { messageFromResult } from '../lib/apiErrors.js';
 import '../invites.css';
 
 // showTitle  false keeps the "Pending invites" heading for screen readers only
 // onJoined   called with the saved group list after an invitation is accepted
 export default function PendingInvites({ showTitle = true, onJoined }) {
-  const { profile, onExpired } = useAuth();
+  const { onExpired } = useAuth();
   const [loadState, setLoadState] = useState('loading'); // 'loading' | 'ready' | 'error'
   const [invites, setInvites] = useState([]); // [{ group_id, group_name, group_type }]
   const [busyId, setBusyId] = useState(null); // group id of the invitation being answered
@@ -67,16 +66,13 @@ export default function PendingInvites({ showTitle = true, onJoined }) {
       if (!res.ok) {
         setMessage(`The invitation to ${invite.group_name} is no longer available.`);
       } else if (accept) {
-        // WORKAROUND(no list routes): START. The user just joined, so remember the group in this browser; that's how it shows up
-        // under "Your groups" right away without a refresh. See lib/groupCache.js.
-        onJoined?.(rememberGroup(profile.id, { id: invite.group_id, name: invite.group_name, type: invite.group_type }));
-        // WORKAROUND(no list routes): END
+        onJoined?.(); // the page asks the server for its groups again, so the new one shows up
         setMessage(`You joined ${invite.group_name}.`);
       } else {
         setMessage(`You declined the invitation to ${invite.group_name}.`);
       }
     },
-    [onExpired, onJoined, profile.id]
+    [onExpired, onJoined]
   );
 
   return (
@@ -106,7 +102,7 @@ export default function PendingInvites({ showTitle = true, onJoined }) {
           <ul className="list-unstyled m-0 invite-list">
             {invites.map((invite) => (
               <li key={invite.group_id} className="row-item">
-                <Avatar text={invite.group_name} large />
+                <Avatar text={invite.group_name} large single />
                 <p className="row-grow invite-text">
                   You’re invited to join{' '}
                   <strong className="invite-name">

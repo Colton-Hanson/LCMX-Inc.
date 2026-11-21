@@ -1,15 +1,18 @@
 // The saved receipt picture, loaded from the server. Shows a calm "Picture removed" note when it is gone.
+// Press the picture to see it bigger in a pop-up where it can be zoomed (PictureViewer).
 //   gone     true once it was deleted here
 //   load     the fetch call (tests and the preview page pass their own)
 //   onPhase  told 'loading' | 'image' | 'pdf' | 'removed' | 'error' as it changes
 import { useEffect, useState } from 'react';
 import Icon from '../Icons.jsx';
 import Message from '../Message.jsx';
+import PictureViewer from './PictureViewer.jsx';
 import { getReceiptPicture } from '../../api/receipts.js';
 import '../../sprint7.css';
 
 export default function ReceiptPicture({ receiptId, store, gone = false, load = getReceiptPicture, onPhase }) {
   const [pic, setPic] = useState({ phase: 'loading', url: '' });
+  const [big, setBig] = useState(false); // the zoom pop-up is open
 
   useEffect(() => {
     if (gone) {
@@ -53,5 +56,15 @@ export default function ReceiptPicture({ receiptId, store, gone = false, load = 
   if (pic.phase === 'pdf') {
     return <a className="btn btn-ghost btn-s" href={pic.url} target="_blank" rel="noreferrer">Open the receipt PDF</a>;
   }
-  return <img className="pic-img" src={pic.url} alt={`Photo of the receipt${store ? ` from ${store}` : ''}`} />;
+  const alt = `Photo of the receipt${store ? ` from ${store}` : ''}`;
+  return (
+    <>
+      {/* The picture is a button: press it to see it bigger in a pop-up where it can be zoomed. */}
+      <button type="button" className="pic-open" aria-haspopup="dialog" onClick={() => setBig(true)}>
+        <img className="pic-img" src={pic.url} alt={alt} />
+        <span className="pic-hint">Tap to zoom</span>
+      </button>
+      {big && <PictureViewer url={pic.url} alt={alt} onClose={() => setBig(false)} />}
+    </>
+  );
 }

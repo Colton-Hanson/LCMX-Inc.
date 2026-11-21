@@ -1,7 +1,7 @@
 // Tests for the browser tab titles (each page has its own) and the account button's name.
 // The API module is mocked, so no backend is needed. Run with: npm test
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import App from '../src/App.jsx';
@@ -9,9 +9,10 @@ import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
 
 vi.mock('../src/api/auth.js');
+import { mockGroups } from './helpers.jsx';
 vi.mock('../src/api/groups.js');
 
-const profile = { id: 1, name: 'Cole Hanson', email: 'cole@umkc.edu', pending_email: null };
+const profile = { id: 1, name: 'Sam Rivera', email: 'sam@umkc.edu', pending_email: null };
 
 function renderAt(path) {
   return render(
@@ -23,9 +24,12 @@ function renderAt(path) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockGroups(groupsApi, []);
   localStorage.clear();
   groupsApi.getPendingInvitations.mockResolvedValue({ ok: true, status: 200, data: [] });
-  groupsApi.getMembers.mockResolvedValue({ ok: true, status: 200, data: [{ user_id: 1, email: 'cole@umkc.edu', is_admin: true }] });
+  groupsApi.getMembers.mockResolvedValue({ ok: true, status: 200, data: [{ user_id: 1, email: 'sam@umkc.edu', is_admin: true }] });
+  groupsApi.getMyGroups.mockResolvedValue({ ok: true, status: 200, data: [] });
+  groupsApi.getGroupEvents.mockResolvedValue({ ok: true, status: 200, data: [] });
 });
 
 describe('Page titles', () => {
@@ -45,7 +49,8 @@ describe('Page titles', () => {
     );
     renderAt(path);
     await screen.findByRole('heading', { level: 1 });
-    expect(document.title).toBe(`${title} – Shared Expense Management Tool`);
+    // Wait for the title itself: a heading can show up a moment before the page sets its title (this made the test flaky).
+    await waitFor(() => expect(document.title).toBe(`${title} – Shared Expense Management Tool`));
   });
 });
 
@@ -53,6 +58,6 @@ describe('Account button', () => {
   it('includes the visible initials in its accessible name', async () => {
     api.getProfile.mockResolvedValue({ ok: true, status: 200, data: profile });
     renderAt('/home');
-    expect(await screen.findByRole('button', { name: 'CH Account menu' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'SR Account menu' })).toBeInTheDocument();
   });
 });

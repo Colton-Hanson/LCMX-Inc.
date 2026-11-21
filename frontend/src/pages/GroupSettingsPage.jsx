@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import Avatar from '../components/Avatar.jsx';
-import Dialog from '../components/Dialog.jsx';
+import Avatar from '../components/Avatar.jsx';import Dialog from '../components/Dialog.jsx';
 import InviteField from '../components/InviteField.jsx';
 import Message from '../components/Message.jsx';
 import SplitDefaultPanel from '../components/SplitDefaultPanel.jsx';
@@ -34,7 +33,6 @@ function Settings({ groupId }) {
   const { profile, onExpired } = useAuth();
   const group = useKnownGroup(groupId);
   const { status, members, setMembers, reload } = useGroupMembers(groupId);
-
   const [inviteInput, setInviteInput] = useState('');
   const [inviteError, setInviteError] = useState('');
   const [inviting, setInviting] = useState(false);

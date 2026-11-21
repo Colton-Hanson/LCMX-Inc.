@@ -1,3 +1,5 @@
+> **Update (Sprint 7):** the group list, a group's events and a group's default split are now real backend routes (`GET /groups`, `GET /groups/{id}/events`, `GET` and `PUT /groups/{id}/split-default`). Nothing about them is saved in the browser any more. Parts of this file that say otherwise are out of date; see `SPRINT7_FRONTEND_HANDOFF.md`.
+
 # Sprint 4 Frontend Handoff
 
 This doc covers where the frontend stands after Sprint 4, what is saved in the browser for now, and what front end needs from backend to complete wiring of certain UI features thus far. The sections are listed below.

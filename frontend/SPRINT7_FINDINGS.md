@@ -7,10 +7,13 @@
 - 135 Edit and delete expense: `PUT` and `DELETE /expenses/{id}`. Admin only. `event_id` sent on add and edit.
 - 137 Delete picture: `DELETE /receipts/{id}/picture`. Picture shown from `GET /receipts/{id}/picture`. "Picture removed" state on 404.
 - 134 Review and assign: save goes to `POST /receipts/{id}/confirm`. Item edits use `PUT /receipts/{id}/items`. Polling stops at `confirmed`.
+- Groups list and group default split now come from the server: `GET /groups`, `GET /groups/{id}`, `GET /groups/{id}/events`, and `GET` and `PUT /groups/{id}/split-default`. Nothing about groups is saved in the browser any more, so a new browser or profile shows the same groups. Percentages are sent in basis points (5000 = 50%).
+- Balances layout (matches the dark mockup): one compact row per person with a one-line summary, starts closed. A caret on the row opens its expense list; one button above the list switches between Expand all and Collapse all. The pencil and trash icons are gone from the lines. Each line has a small underlined Edit link (admin only, same rule as before) that opens the edit screen. Delete is on the edit screen as Delete expense, with the same confirmation that says what is lost and the same server messages. Settlements still have no undo.
+- Final acceptance pass: the delete confirmation also says what is kept; settlement history shows only payments you are part of (the server sends every payment in the group, so it is filtered in the app); the people picker is a grid of equal boxes (5 across, 2 on a phone) and long emails wrap instead of being cut off. Every screen was checked at 375 px wide (iPhone SE) with no sideways scrolling.
 - Guessed routes are gone. `src/api/proposed.js` has the real paths. "Not available" now means only: no connection, 405, 501.
 
 **Tests and build**
-- Frontend: 32 files, 524 tests, all pass (the earlier Sprint 7 build had 494). Re-checked fresh from a terminal with an upper-case drive letter on Nov 19, together with the build.
+- Frontend: 35 files, 564 tests, all pass (the earlier Sprint 7 build had 524). Run with `npm test` from a terminal with an upper-case drive letter, together with the build.
 - Production build: passes.
 - Backend copy: 256 of 258 pass. The 2 misses check Unix file permissions, so they only fail on Windows.
 - Reader: 32 tests pass (all reader and call-counter tests).
@@ -40,13 +43,9 @@
 
 **Files**
 - Stage: everything under `frontend/` that `git status` lists (source, tests, `SPRINT7_FRONTEND_HANDOFF.md`, this file). `package.json` and `package-lock.json` were already modified before this work. Include them only if that change is wanted.
-- Also in `frontend/`: `sprint7-verification/` (the review brief, the check guide and the screenshots zip, moved there from the old outputs folder at the repo root, which is now empty).
+- Not part of the commit: `sprint7-verification/` (the review brief, the check guide and the screenshots zip). It stays on disk only and is listed in `frontend/.gitignore`.
 - Do not stage: anything under `LCMX-Reader` or `LCMX-Runtime` (both are outside the repo).
 - Nothing was committed, staged or pushed.
-
-**Proven and not proven**
-- Proven by running: every route above works end to end against a copy of the backend with seeded data, and the reader reads 84 of 85 test receipts.
-- Not proven: the shared team database, a real phone, a real screen reader, and real photos (all reader tests used drawn receipts).
 
 ---
 
@@ -223,7 +222,6 @@ Together with the earlier single-receipt re-reads (low and medium both read it a
 - A date like 05-11-2026 is ambiguous (day-month or month-day). The reader chose month-day.
 - Very long receipts (30+ lines) are slow, and a tilted photo of one can fail.
 - Edit and delete are admin only for now. The payer or creator rule is behind `PAYER_AND_CREATOR_MAY_CHANGE` in `src/lib/expensePermissions.js`.
-- The group list is still saved on the device (older workaround, not part of these tickets). A new browser shows no groups until they are loaded again.
 - Test data was drawn, not photographed. Real photos will vary more.
 
 ### Backend suggestions
@@ -237,7 +235,9 @@ Together with the earlier single-receipt re-reads (low and medium both read it a
 - Done in the stand-in reader: output limit raised to 64000 tokens with a streaming call. Keep it when the reader becomes part of the backend. A 35-line receipt used up to 12826 output tokens.
 - Backend tests need a second database named `shared_expense_sprint4_test`, created and migrated first. The README does not say so.
 - Two receipt upload tests check Unix file permissions and fail on Windows.
-- Settlements: there is no edit or undo route. A mistaken payment cannot be reversed.
+- Settlements: there is no edit or undo route. A mistaken payment cannot be reversed. This is a Sprint 8 item.
+- Receipt reading is not started automatically. Nothing in the backend sends an uploaded receipt to the reader yet, so a receipt stays at `uploaded` until a reader is run by hand.
+- The stand-in reader lives in the `temporary-reader` folder at the top of the repo. Delete that folder when the real reader is built into the backend.
 - Settlement history rows could list the expenses each payment covered (the mockup shows this).
 
 ### Problems hit and how they were fixed

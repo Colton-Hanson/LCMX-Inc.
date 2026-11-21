@@ -4,6 +4,7 @@ import { useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar, { avatarClass } from '../Avatar.jsx';
 import Icon from '../Icons.jsx';
+import { labelsFor } from '../../lib/people.js';
 import Message from '../Message.jsx';
 import ExpandText from './ExpandText.jsx';
 import MiniReceipt from './MiniReceipt.jsx';
@@ -65,7 +66,8 @@ export function buildAssignments(rows, itemIds) {
 //   removePicture, loadPicture  optional delete and fetch calls for the preview page
 export default function ReceiptReview({ receipt, members, events = [], myId, groupName, saveItems, saveExpense, onSaved, onExpired, removePicture, loadPicture }) {
   const ids = useId();
-  const people = members.map((m) => ({ id: m.user_id, name: m.user_id === myId ? `${m.email} (you)` : m.email }));
+  const shortNames = labelsFor(members);
+  const people = members.map((m) => ({ id: m.user_id, name: m.user_id === myId ? `${shortNames[m.user_id]} (you)` : shortNames[m.user_id] }));
   const allIds = people.map((p) => p.id);
   const [onReceipt, setOnReceipt] = useState(allIds);
   const [rows, setRows] = useState(() => startRows(receipt, allIds));
@@ -242,7 +244,7 @@ export default function ReceiptReview({ receipt, members, events = [], myId, gro
             return (
               <div key={row.key} className={`irow${count === 0 ? ' is-flag' : ''}`} role="group" aria-label={`Item ${index + 1}: ${title}`}>
                 <label className="rv-cell rv-name">
-                  <span className="rv-lab">Item</span>
+                  <span className="rv-lab">{`Item #${index + 1}`}</span>
                   <input className="form-in" type="text" autoComplete="off" value={row.name} aria-label="Item name" aria-invalid={row.badName} onChange={(e) => change(row.key, { name: e.target.value })} onBlur={saveOnBlur} />
                 </label>
                 <label className="rv-cell rv-qty">

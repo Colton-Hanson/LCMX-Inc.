@@ -95,7 +95,7 @@ export default function SettleDialog({ row, owes, off = false, onRecord, onOff, 
               {showError ? (
                 <Message kind="error" alert id={helpId}>{check.error}</Message>
               ) : (
-                <p className="sm-mute" id={helpId}>{`Up to ${formatMoney(cents)}, like 10.00.`}</p>
+                <p className="sm-mute" id={helpId}>{`Up to ${formatMoney(cents)}. Use dollars and cents.`}</p>
               )}
             </div>
           )}

@@ -86,7 +86,7 @@ export default function ReceiptStatusCard({ state, receipt, fileName, elapsed, s
             <dt>Store</dt><dd>{summary.store || '—'}</dd>
             <dt>Date</dt><dd>{summary.date || '—'}</dd>
             <dt>Items</dt><dd>{summary.itemCount} found</dd>
-            <dt>Total</dt><dd className="money">{summary.total}</dd>
+            <dt>Items subtotal</dt><dd className="money">{summary.total}</dd>
           </dl>
           <p className="mute sm">The AI can make mistakes. You will check every item on the next screen before anything is saved.</p>
           <MiniReceipt

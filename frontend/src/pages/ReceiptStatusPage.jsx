@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../components/RequireAuth.jsx';
 import PickCard from '../components/receipt/PickCard.jsx';
@@ -6,7 +6,7 @@ import ReceiptFrame from '../components/receipt/ReceiptFrame.jsx';
 import ReceiptStatusCard from '../components/receipt/ReceiptStatusCard.jsx';
 import UploadStatusCard from '../components/receipt/UploadStatusCard.jsx';
 import { getMembers } from '../api/groups.js';
-import { getKnownGroups } from '../lib/groupCache.js';
+import { useMyGroups } from '../lib/groupHooks.js';
 import { useReceiptStatus } from '../lib/useReceiptStatus.js';
 import { useReceiptUpload } from '../lib/useReceiptUpload.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
@@ -40,9 +40,7 @@ export default function ReceiptStatusPage() {
     };
   }, [needsAdminCheck, receiptGroup, profile.id]);
 
-  // WORKAROUND(no list routes): START. The group list is the one this browser has saved. See lib/groupCache.js.
-  const known = useMemo(() => getKnownGroups(profile.id), [profile.id]);
-  // WORKAROUND(no list routes): END
+  const { groups: known } = useMyGroups(); // the user's groups from the server, for the group picker
   const [chosenGroup, setChosenGroup] = useState(null);
   const groupId = chosenGroup ?? status.receipt?.group_id ?? known[0]?.id ?? 0;
   const groups = known.some((g) => g.id === groupId) || !groupId ? known : [...known, { id: groupId, name: 'Group', type: '' }];

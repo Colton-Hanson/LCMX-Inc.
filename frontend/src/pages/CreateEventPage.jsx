@@ -7,6 +7,7 @@ import { useAuth } from '../components/RequireAuth.jsx';
 import { createEvent } from '../api/groups.js';
 import { parseGroupId, useGroupMembers, useKnownGroup } from '../lib/groupHooks.js';
 import { messageFromResult } from '../lib/apiErrors.js';
+import { labelsFor } from '../lib/people.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
 import { validateEventName } from '../lib/validators.js';
 
@@ -31,6 +32,7 @@ function EventForm({ groupId }) {
   const { onExpired } = useAuth();
   const group = useKnownGroup(groupId);
   const { status, members, reload } = useGroupMembers(groupId);
+  const labels = labelsFor(members); // short names like "Alice R."
 
   const [name, setName] = useState('');
   const [mode, setMode] = useState('all'); // 'all' | 'pick'
@@ -126,8 +128,8 @@ function EventForm({ groupId }) {
               {members.map((m) => (
                 <li key={m.user_id}>
                   <button type="button" className={`chip${picked.includes(m.user_id) ? ' is-on' : ''}`} aria-pressed={picked.includes(m.user_id)} onClick={() => toggle(m.user_id)}>
-                    <Avatar text={m.email} />
-                    {m.email}
+                    <Avatar text={labels[m.user_id]} />
+                    {labels[m.user_id]}
                   </button>
                 </li>
               ))}

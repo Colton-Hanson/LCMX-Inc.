@@ -12,7 +12,7 @@ import MiniReceipt from '../src/components/receipt/MiniReceipt.jsx';
 import PictureSection, { canDeletePicture } from '../src/components/receipt/PictureSection.jsx';
 import { slipDate, slipLines } from '../src/lib/receiptMath.js';
 import { checkA11y } from './a11y.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
@@ -32,7 +32,7 @@ const deleted = ok({ receipt_id: 9, picture_deleted: true, expense_id: null });
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
-  localStorage.setItem('groups:1', JSON.stringify([{ id: 5, name: 'Lake House', type: 'outing' }]));
+  mockGroups(groupsApi, [{ id: 5, name: 'Lake House', type: 'outing' }]);
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: me.email, is_admin: false }]));
@@ -210,14 +210,42 @@ describe('Receipt picture', () => {
 
   it('shows the picture with alt text, and the delete button for the uploader', async () => {
     show();
-    expect(await screen.findByRole('img', { name: 'Photo of the receipt from Corner Market' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Photo of the receipt from Corner Market/ })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Delete receipt picture' })).toBeInTheDocument();
     expect(receiptsApi.getReceiptPicture).toHaveBeenCalledWith(9);
   });
 
+  it('opens the picture in a pop-up you can zoom, and Escape or Close puts you back', async () => {
+    const user = userEvent.setup();
+    show();
+    const opener = await screen.findByRole('button', { name: /Photo of the receipt from Corner Market/ });
+    await user.click(opener);
+    const dialog = screen.getByRole('dialog', { name: 'Receipt picture' });
+    const big = within(dialog).getByRole('img', { name: /Photo of the receipt from Corner Market/ });
+    expect(big).toHaveStyle({ width: '100%' });
+    expect(within(dialog).getByRole('button', { name: 'Zoom out' })).toBeDisabled(); // already as small as it goes
+    await user.click(within(dialog).getByRole('button', { name: 'Zoom in' }));
+    expect(big).toHaveStyle({ width: '150%' });
+    expect(within(dialog).getByText('150%')).toBeInTheDocument();
+    await user.keyboard('+');
+    expect(big).toHaveStyle({ width: '200%' });
+    await user.keyboard('-');
+    expect(big).toHaveStyle({ width: '150%' });
+    await user.click(within(dialog).getByRole('button', { name: 'Fit' }));
+    expect(big).toHaveStyle({ width: '100%' });
+    await user.dblClick(big); // double click toggles to 2x
+    expect(big).toHaveStyle({ width: '200%' });
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+    await user.click(opener);
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('hides the delete button from someone who is not the uploader or an admin', async () => {
     show({ myId: 2 });
-    await screen.findByRole('img', { name: 'Photo of the receipt from Corner Market' });
+    await screen.findByRole('button', { name: /Photo of the receipt from Corner Market/ });
     expect(screen.queryByRole('button', { name: 'Delete receipt picture' })).not.toBeInTheDocument();
   });
 
@@ -236,7 +264,7 @@ describe('Receipt picture', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete picture' }));
     expect(await screen.findByText('Picture deleted. All items are kept.')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Picture removed. The items are kept.' })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /Photo of the receipt/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Photo of the receipt/ })).not.toBeInTheDocument();
     expect(await checkA11y()).toHaveNoViolations();
   });
 });
@@ -261,7 +289,7 @@ describe('Receipt status screen', () => {
     first.unmount();
     groupsApi.getMembers.mockResolvedValue(ok([{ user_id: 1, email: me.email, is_admin: false }]));
     renderApp('/receipts/9');
-    await screen.findByRole('img', { name: 'Photo of the receipt from Corner Market' });
+    await screen.findByRole('button', { name: /Photo of the receipt from Corner Market/ });
     expect(screen.queryByRole('button', { name: 'Delete receipt picture' })).not.toBeInTheDocument();
   });
 

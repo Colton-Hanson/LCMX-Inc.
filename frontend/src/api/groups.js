@@ -5,7 +5,8 @@
 //   POST /groups   POST /groups/{id}/invitations   GET /groups/invitations/pending
 //   POST /groups/{id}/invitations/accept   POST /groups/{id}/invitations/decline
 //   GET /groups/{id}/members   DELETE /groups/{id}/members/{userId}[?confirm=true]
-//   POST /events
+//   POST /events   GET /groups   GET /groups/{id}   GET /groups/{id}/events
+//   GET and PUT /groups/{id}/split-default
 
 import { API_PREFIX, normalizeEmail, request } from './http.js';
 
@@ -44,6 +45,14 @@ export const createEvent = ({ name, groupId, memberIds }) =>
 
 // The groups the signed-in user is an accepted member of: [{ id, name, group_type, created_by, members }].
 export const getMyGroups = () => request('GET', GROUPS_PATH);
+
+// One group the signed-in user is a member of: { id, name, group_type, created_by, members }. 403 or 404 when not a member.
+export const getGroup = (groupId) => request('GET', `${GROUPS_PATH}/${groupId}`);
+
+// A group's default split: { method: 'even' | 'percentage', percents: { userId: basisPoints } }, 5000 = 50%.
+// Any accepted member can read it or change it. The server says 409 if the saved percentages are inconsistent.
+export const getSplitDefault = (groupId) => request('GET', `${GROUPS_PATH}/${groupId}/split-default`);
+export const saveSplitDefault = (groupId, value) => request('PUT', `${GROUPS_PATH}/${groupId}/split-default`, value);
 
 // A group's events: [{ id, group_id, name, member_ids }].
 export const getGroupEvents = (groupId) => request('GET', `${GROUPS_PATH}/${groupId}/events`);

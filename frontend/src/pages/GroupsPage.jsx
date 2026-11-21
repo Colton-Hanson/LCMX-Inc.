@@ -67,7 +67,7 @@ export default function GroupsPage() {
             <li key={g.id}>
               <Link className="group-card" to={`/groups/${g.id}`} state={{ group: { id: g.id, name: g.name, type: g.group_type } }}>
                 <span className="group-card-top">
-                  <Avatar text={g.name} large />
+                  <Avatar text={g.name} large single />
                   <span className="pill">{typeLabel(g.group_type)}</span>
                 </span>
                 <span className="group-card-name">{g.name}</span>

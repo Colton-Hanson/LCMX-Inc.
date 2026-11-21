@@ -11,6 +11,7 @@ import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
 
 vi.mock('../src/api/auth.js');
+import { mockGroups } from './helpers.jsx';
 vi.mock('../src/api/groups.js');
 
 // Renders Home inside a small router. "/login" shows plain text so a test can confirm a redirect.
@@ -27,10 +28,11 @@ function renderHome() {
   );
 }
 
-const loggedIn = { ok: true, status: 200, data: { id: 1, name: 'Cole Hanson', email: 'cole@umkc.edu' } };
+const loggedIn = { ok: true, status: 200, data: { id: 1, name: 'Sam Rivera', email: 'sam@umkc.edu' } };
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockGroups(groupsApi, []);
   localStorage.clear();
   groupsApi.getPendingInvitations.mockResolvedValue({ ok: true, status: 200, data: [] }); // the page loads invitations on open
 });
@@ -39,7 +41,7 @@ describe('Home page', () => {
   it('shows the page heading and the signed-in top bar once the session is confirmed', async () => {
     api.getProfile.mockResolvedValue(loggedIn);
     renderHome();
-    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Sam$/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Account menu/ })).toBeInTheDocument();
   });
@@ -55,7 +57,7 @@ describe('Home page', () => {
   it('shows the app name and logo link in the top bar', async () => {
     api.getProfile.mockResolvedValue(loggedIn);
     renderHome();
-    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ });
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening), Sam$/ });
     expect(screen.getByRole('link', { name: /Shared Expense Management Tool/ })).toHaveAttribute('href', '/home');
   });
 
@@ -68,7 +70,7 @@ describe('Home page', () => {
 
     await user.click(button);
     expect(button).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('cole@umkc.edu')).toBeInTheDocument();
+    expect(screen.getByText('sam@umkc.edu')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
@@ -82,7 +84,7 @@ describe('Home page', () => {
     const user = userEvent.setup();
     renderHome();
     await user.click(await screen.findByRole('button', { name: /Account menu/ }));
-    await user.click(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ }));
+    await user.click(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening), Sam$/ }));
     expect(screen.queryByRole('button', { name: 'Log out' })).toBeNull();
   });
 
@@ -106,21 +108,21 @@ describe('Home page', () => {
     await user.click(screen.getByRole('button', { name: 'Log out' }));
     expect(await screen.findByText(/couldn’t log you out/i)).toBeInTheDocument();
     expect(screen.queryByText('LOGIN PAGE')).toBeNull();
-    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening), Sam$/ })).toBeInTheDocument();
   });
 
   it('redirects guests to the login page (401)', async () => {
     api.getProfile.mockResolvedValue({ ok: false, status: 401, data: { detail: 'Authentication required.' } });
     renderHome();
     expect(await screen.findByText('LOGIN PAGE')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Good (morning|afternoon|evening), Sam$/ })).toBeNull();
   });
 
   it('shows an error instead of the page when the backend cannot be reached', async () => {
     api.getProfile.mockResolvedValue({ ok: false, status: 0, network: true });
     renderHome();
     expect(await screen.findByText(/couldn’t reach the server/i)).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /^Good (morning|afternoon|evening), Cole$/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^Good (morning|afternoon|evening), Sam$/ })).toBeNull();
     expect(screen.queryByText('LOGIN PAGE')).toBeNull();
   });
 });

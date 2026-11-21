@@ -12,6 +12,8 @@ import { useAuth } from './RequireAuth.jsx';
 import { getGroupExpenses } from '../api/expenses.js';
 import { FORMER_MEMBER } from '../lib/balances.js';
 import { canChangeExpense } from '../lib/expensePermissions.js';
+import { labelsFor, personLabel } from '../lib/people.js';
+import { useOpenSet } from '../lib/useOpenSet.js';
 import { formatMoney, toCents } from '../lib/splits.js';
 import '../groupExpenses.css';
 import '../receipt.css';
@@ -34,7 +36,8 @@ const money = (amount) => {
 // members      the group's accepted members [{ user_id, email }] (used to turn paid_by into an email)
 // membersReady false until the member list has loaded
 // load, remove  the list and delete calls (the preview page passes its own)
-export default function RecentExpenses({ groupId, group, members, membersReady, load = getGroupExpenses, remove }) {
+// onExpenses   optional: called with the full list whenever it loads or changes (the Events card on the same page uses it)
+export default function RecentExpenses({ groupId, group, members, membersReady, load = getGroupExpenses, remove, onExpenses }) {
   const { profile, onExpired } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(null); // { expense, del } for the details dialog
@@ -48,6 +51,10 @@ export default function RecentExpenses({ groupId, group, members, membersReady, 
   const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
   const [expenses, setExpenses] = useState([]);
   const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    onExpenses?.(expenses);
+  }, [expenses]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the list changes
 
   useEffect(() => {
     let cancelled = false; // ignore the reply if the page was closed first
@@ -68,8 +75,8 @@ export default function RecentExpenses({ groupId, group, members, membersReady, 
     };
   }, [groupId, attempt, onExpired, load]);
 
-  const emails = Object.fromEntries(members.map((m) => [m.user_id, m.email]));
-  const payerEmail = (id) => (id === profile.id ? profile.email : emails[id] ?? FORMER_MEMBER);
+  const names = labelsFor(members); // short names instead of emails
+  const payerEmail = (id) => (id === profile.id ? personLabel(profile) : names[id] ?? FORMER_MEMBER);
   const payerName = (id) => (id === profile.id ? 'You' : payerEmail(id));
 
   // Everyone in the split with their amount: the payer first, then by name.
@@ -78,9 +85,20 @@ export default function RecentExpenses({ groupId, group, members, membersReady, 
       .map(([id, amount]) => ({ id, name: payerName(Number(id)), amount: money(amount), payer: Number(id) === e.paid_by }))
       .sort((a, b) => b.payer - a.payer || a.name.localeCompare(b.name));
 
+  // Which "Split between N people" rows are open, and the ids that can be opened (for Expand all / Collapse all).
+  const rows = useOpenSet();
+  const splitIds = status === 'ready' && membersReady ? expenses.slice(0, SHOWN).filter((e) => splitPeople(e).length > 1).map((e) => e.id) : [];
+
   return (
     <section className="panel" aria-labelledby="expenses-title">
-      <h2 id="expenses-title">Recent expenses</h2>
+      <div className="panel-head">
+        <h2 id="expenses-title">Recent expenses</h2>
+        {splitIds.length > 0 && (
+          <button type="button" className="btn btn-ghost mini-btn" onClick={() => rows.toggleAll(splitIds)}>
+            {rows.allOpen(splitIds) ? 'Collapse all' : 'Expand all'}
+          </button>
+        )}
+      </div>
       {note && <Message kind="ok" role="status" boxRef={noteRef} tabIndex={-1}>{note}</Message>}
 
       {(status === 'loading' || (status === 'ready' && !membersReady)) && (
@@ -134,7 +152,7 @@ export default function RecentExpenses({ groupId, group, members, membersReady, 
                     />
                   )}
                   {people.length > 1 && (
-                    <details className="exp-split">
+                    <details className="exp-split" open={rows.isOpen(e.id)} onToggle={(ev) => rows.setOpen(e.id, ev.currentTarget.open)}>
                       <summary>{`Split between ${people.length} people`}</summary>
                       <ul className="exp-split-list">
                         {people.map((p) => (

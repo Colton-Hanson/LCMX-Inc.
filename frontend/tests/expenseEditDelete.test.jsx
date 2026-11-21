@@ -10,7 +10,7 @@ import * as expensesApi from '../src/api/expenses.js';
 import * as proposedApi from '../src/api/proposed.js';
 import { canChangeExpense, CHANGE_RULE_TEXT, PAYER_AND_CREATOR_MAY_CHANGE } from '../src/lib/expensePermissions.js';
 import { checkA11y } from './a11y.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
@@ -46,7 +46,7 @@ const notBuilt = fail(405, { detail: 'Method Not Allowed' });
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
-  localStorage.setItem('groups:1', JSON.stringify([group]));
+  mockGroups(groupsApi, [group]);
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(membersAs(true))); // the server lets only a group admin change an expense
@@ -106,8 +106,11 @@ describe('Expense details dialog', () => {
     const dialog = screen.getByRole('dialog', { name: 'Pizza' });
     expect(dialog).toHaveAccessibleDescription('You paid $30.00 on Oct 30, 2026 in Lake House.');
     const shares = within(dialog).getByRole('list', { name: 'Each person’s share' });
-    expect(within(shares).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['You$10.00', 'maya@example.com$10.00', 'devin@example.com$10.00']);
-    expect(within(dialog).getByRole('group', { name: 'Receipt: Lake House, Oct 30, 2026, 1 item, total 30.00' })).toBeInTheDocument();
+    expect(within(shares).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['You$10.00', 'Maya$10.00', 'Devin$10.00']);
+    // A hand-entered expense has no scanned picture, so the slip is drawn from the expense itself.
+    const slip = within(dialog).getByRole('group', { name: 'Receipt: Lake House, Oct 30, 2026, 1 item, total 30.00' });
+    expect(slip).toHaveTextContent('PIZZA');
+    expect(slip).toHaveTextContent('TOTAL');
     expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
@@ -150,11 +153,11 @@ describe('Deleting an expense', () => {
     return screen.getByRole('dialog', { name: 'Delete this expense?' });
   };
 
-  it('asks first and says exactly what is lost and how balances change', async () => {
+  it('asks first and says what is lost, how balances change, and what is kept', async () => {
     const user = await openGroup();
     const dialog = await openDelete(user);
     expect(dialog).toHaveAccessibleDescription(
-      'This deletes “Pizza” ($30.00) and each person’s share of it. Balances in Lake House are worked out again without it, so what people owe each other will change. This can’t be undone.'
+      'This deletes “Pizza” ($30.00) and each person’s share of it. Balances in Lake House are worked out again without it, so what people owe each other will change. Kept: the group, its other expenses, payments already recorded, and the items on any receipt. This can’t be undone.'
     );
     expect(within(dialog).getByText('Shares that will be deleted')).toBeInTheDocument();
     expect(within(dialog).getAllByRole('listitem')).toHaveLength(3);
@@ -259,7 +262,7 @@ describe('Editing an expense', () => {
     expect(screen.getByLabelText('Group')).toBeDisabled();
     expect(screen.getByLabelText('Paid by')).toHaveValue('1');
     expect(screen.getByRole('button', { name: 'Custom' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText('Amount for maya@example.com')).toHaveValue('10.00');
+    expect(screen.getByLabelText('Amount for Maya')).toHaveValue('10.00');
     expect(screen.queryByRole('group', { name: 'How to add' })).not.toBeInTheDocument();
   });
 
@@ -359,11 +362,15 @@ describe('Event picker on add and edit expense', () => {
     expect(picker).toHaveAccessibleDescription('Picking an event puts its members in the split.');
     await user.selectOptions(picker, 'Lake Cabin');
     const chips = within(screen.getByRole('list', { name: 'Members' }));
-    expect(chips.getByRole('button', { name: /sam@example\.com/ })).toHaveAttribute('aria-pressed', 'false');
-    expect(chips.getByRole('button', { name: /maya@example\.com/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(chips.getByRole('button', { name: /devin@example\.com/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(chips.getByRole('button', { name: /Sam/ })).toHaveAttribute('aria-pressed', 'false');
+    expect(chips.getByRole('button', { name: /Maya/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(chips.getByRole('button', { name: /Devin/ })).toHaveAttribute('aria-pressed', 'true');
+    // "No event" keeps whoever is picked right now. It does not put everyone back in (that was a bug).
     await user.selectOptions(picker, 'No event');
-    expect(chips.getByRole('button', { name: /sam@example\.com/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(chips.getByRole('button', { name: /Sam/ })).toHaveAttribute('aria-pressed', 'false');
+    expect(chips.getByRole('button', { name: /Maya/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(chips.getByRole('button', { name: /Sam/ })); // and you can still add Sam by hand
+    expect(chips.getByRole('button', { name: /Sam/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('is on the edit form too', async () => {
@@ -430,6 +437,7 @@ describe('Balances page: expenses under each person', () => {
     renderApp('/balances');
     await screen.findByRole('heading', { name: 'Who owes you', level: 2 });
     await user.click(screen.getByRole('button', { name: 'Show both' }));
+    await user.click(screen.getByRole('button', { name: 'Expand all' })); // the rows start closed
     return user;
   }
 
@@ -437,24 +445,26 @@ describe('Balances page: expenses under each person', () => {
     groupsApi.getMembers.mockResolvedValue(ok(membersAs(false)));
     await openBalances();
     expect(actionNames()).toEqual([]);
-    expect(screen.getByRole('button', { name: 'Pizza', hidden: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pizza' })).toBeInTheDocument();
   });
 
-  it('shows them on every expense for the group admin', async () => {
+  it('shows an underlined Edit link on every expense for the group admin, and no Delete', async () => {
     await openBalances();
-    expect(actionNames()).toEqual(['Edit Pizza', 'Delete Pizza', 'Edit Boat', 'Delete Boat']);
+    expect(actionNames()).toEqual(['Edit Pizza', 'Edit Boat']);
+    const link = screen.getByRole('button', { name: 'Edit Pizza' });
+    expect(link).toHaveTextContent('Edit');
+    expect(link).toHaveClass('exp-edit-link');
+    expect(screen.queryByRole('button', { name: /^Delete / })).not.toBeInTheDocument();
+    expect(document.querySelector('.icon-btn')).toBeNull();
   });
 
-  it('opens the details from an expense line, and deletes from there', async () => {
+  it('opens the details from an expense line, with Edit but no Delete on this page', async () => {
     const user = await openBalances();
     await user.click(screen.getByRole('button', { name: 'Pizza' }));
     const dialog = screen.getByRole('dialog', { name: 'Pizza' });
     expect(dialog).toHaveAccessibleDescription('You paid $30.00 on Oct 30, 2026 in Lake House.');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete expense' }));
-    expect(proposedApi.deleteExpense).toHaveBeenCalledWith(11);
-    expect(await screen.findByText('Expense “Pizza” deleted. Balances are updated.')).toBeInTheDocument();
-    await waitFor(() => expect(expensesApi.getBalances).toHaveBeenCalledTimes(2));
+    expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
   it('opens the edit form from an expense line', async () => {
@@ -467,5 +477,54 @@ describe('Balances page: expenses under each person', () => {
   it('has no accessibility problems with the expense lines open', async () => {
     await openBalances();
     expect(await checkA11y()).toHaveNoViolations();
+  });
+});
+
+describe('Deleting from the edit screen', () => {
+  const openEditFromGroup = async () => {
+    const user = userEvent.setup();
+    renderApp('/groups/5', { group });
+    await screen.findByRole('heading', { name: 'Lake House', level: 1 });
+    await user.click(await screen.findByRole('button', { name: 'Edit Pizza' }));
+    await screen.findByRole('heading', { name: 'Edit expense', level: 1 });
+    await screen.findByLabelText('Paid by');
+    return user;
+  };
+
+  it('has a Delete expense button for the group admin that asks first and says what is lost', async () => {
+    const user = await openEditFromGroup();
+    await user.click(screen.getByRole('button', { name: 'Delete expense' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete this expense?' });
+    expect(dialog).toHaveAccessibleDescription(expect.stringContaining('This can’t be undone.'));
+    expect(proposedApi.deleteExpense).not.toHaveBeenCalled();
+    await user.click(within(dialog).getByRole('button', { name: 'Keep it' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(proposedApi.deleteExpense).not.toHaveBeenCalled();
+  });
+
+  it('deletes after the confirmation and goes back to the group with a note', async () => {
+    const user = await openEditFromGroup();
+    await user.click(screen.getByRole('button', { name: 'Delete expense' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete expense' }));
+    expect(proposedApi.deleteExpense).toHaveBeenCalledWith(11);
+    expect(await screen.findByText('Expense “Pizza” deleted. Balances are updated.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Edit expense' })).not.toBeInTheDocument();
+  });
+
+  it('shows the server sentence and keeps the screen when the server says no', async () => {
+    proposedApi.deleteExpense.mockResolvedValue(fail(403, { detail: 'You can’t delete this expense.' }));
+    const user = await openEditFromGroup();
+    await user.click(screen.getByRole('button', { name: 'Delete expense' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete expense' }));
+    expect(await within(screen.getByRole('dialog')).findByRole('alert')).toHaveTextContent('You can’t delete this expense.');
+  });
+
+  it('has no Delete expense button for someone who is not the admin', async () => {
+    groupsApi.getMembers.mockResolvedValue(ok(membersAs(false)));
+    renderApp('/groups/5/expenses/new', { group, edit: expense(11, 'Pizza', 1, { shares: { 1: '20.00', 2: '10.00' } }) });
+    await screen.findByRole('heading', { name: 'Edit expense', level: 1 });
+    await screen.findByLabelText('Paid by');
+    expect(screen.queryByRole('button', { name: 'Delete expense' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
   });
 });

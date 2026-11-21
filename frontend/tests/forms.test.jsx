@@ -51,7 +51,7 @@ describe('Registration (SCRUM-11)', () => {
   it('confirms when passwords match and blocks when they do not', async () => {
     const user = userEvent.setup();
     renderAt('/register');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'Abcdefg!');
     await user.type(screen.getByLabelText('Confirm password'), 'Abcdefg?'); // deliberately different
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -68,15 +68,15 @@ describe('Registration (SCRUM-11)', () => {
     api.loginUser.mockResolvedValue({ ok: true, status: 200 });    // ...and the automatic login after it works
     const user = userEvent.setup();
     renderAt('/register');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'Abcdefg!');
     await user.type(screen.getByLabelText('Confirm password'), 'Abcdefg!');
     await user.click(screen.getByRole('button', { name: /create account/i }));
     await waitFor(() => expect(screen.getByText('HOME')).toBeInTheDocument()); // redirected home
     // The server received the email and password (and NOT the confirm field):
-    expect(api.registerUser).toHaveBeenCalledWith({ email: 'cole@umkc.edu', password: 'Abcdefg!' });
+    expect(api.registerUser).toHaveBeenCalledWith({ email: 'sam@umkc.edu', password: 'Abcdefg!' });
     // The register endpoint doesn't start a session, so the form logs in right after registering:
-    expect(api.loginUser).toHaveBeenCalledWith({ email: 'cole@umkc.edu', password: 'Abcdefg!' });
+    expect(api.loginUser).toHaveBeenCalledWith({ email: 'sam@umkc.edu', password: 'Abcdefg!' });
   });
 
   it('sends the user to the login page with a note if the automatic login fails', async () => {
@@ -84,7 +84,7 @@ describe('Registration (SCRUM-11)', () => {
     api.loginUser.mockResolvedValue({ ok: false, status: 503 }); // account created, but login hiccuped
     const user = userEvent.setup();
     renderAt('/register');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'Abcdefg!');
     await user.type(screen.getByLabelText('Confirm password'), 'Abcdefg!');
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -97,7 +97,7 @@ describe('Registration (SCRUM-11)', () => {
     api.registerUser.mockResolvedValue({ ok: false, status: 409 });
     const user = userEvent.setup();
     renderAt('/register');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'Abcdefg!');
     await user.type(screen.getByLabelText('Confirm password'), 'Abcdefg!');
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -110,7 +110,7 @@ describe('Registration (SCRUM-11)', () => {
     api.registerUser.mockResolvedValue({ ok: false, status: 422 });
     const user = userEvent.setup();
     renderAt('/register');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'Abcdefg!');
     await user.type(screen.getByLabelText('Confirm password'), 'Abcdefg!');
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -123,7 +123,7 @@ describe('Login (SCRUM-12)', () => {
     api.loginUser.mockResolvedValue({ ok: false, status: 401 }); // fake server says "rejected"
     const user = userEvent.setup();
     renderAt('/login');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'wrong');
     await user.click(screen.getByRole('button', { name: /log in/i }));
     expect(await screen.findByText(/combination didn’t work/i)).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe('Login (SCRUM-12)', () => {
     api.loginUser.mockResolvedValue({ ok: true, status: 200 }); // fake server says "logged in"
     const user = userEvent.setup();
     renderAt('/login');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'Abcdefg!');
     await user.click(screen.getByRole('button', { name: /log in/i }));
     await waitFor(() => expect(screen.getByText('HOME')).toBeInTheDocument());
@@ -186,7 +186,7 @@ describe('Registration server errors', () => {
     api.registerUser.mockResolvedValue({ ok: false, status: 500 });
     const user = userEvent.setup();
     renderAt('/register');
-    await user.type(screen.getByLabelText('Email'), 'cole@umkc.edu');
+    await user.type(screen.getByLabelText('Email'), 'sam@umkc.edu');
     await user.type(screen.getByLabelText('Password'), 'Abcdefg!');
     await user.type(screen.getByLabelText('Confirm password'), 'Abcdefg!');
     await user.click(screen.getByRole('button', { name: /create account/i }));

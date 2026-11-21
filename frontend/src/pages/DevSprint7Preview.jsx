@@ -6,7 +6,8 @@ import RecentExpenses from '../components/RecentExpenses.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
 import ReceiptReview from '../components/receipt/ReceiptReview.jsx';
 import { BalancesView } from './BalancesPage.jsx';
-import { AI_NOTE, ReviewFrame, ReviewNotice, reviewBlocker } from './ReceiptReviewPage.jsx';
+import { ReviewFrame, ReviewNotice } from './ReceiptReviewPage.jsx';
+import { AI_NOTE, reviewBlocker } from '../lib/reviewParts.jsx';
 import '../balances.css';
 import '../receipt.css';
 import '../sprint7.css';
@@ -119,7 +120,6 @@ export default function DevSprint7Preview() {
           onRecord={() => wait(current.record)}
           onChanged={noop}
           onRetryHistory={noop}
-          removeExpense={() => wait(current.record)}
         />
       </main>
     );

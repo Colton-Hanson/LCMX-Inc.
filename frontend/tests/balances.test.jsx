@@ -7,7 +7,7 @@ import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
 import * as expensesApi from '../src/api/expenses.js';
 import * as proposedApi from '../src/api/proposed.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
@@ -16,12 +16,12 @@ vi.mock('../src/api/proposed.js', async (original) => ({ ...(await original()), 
 
 const membersByGroup = {
   5: [
-    { user_id: 1, email: 'cole@umkc.edu', is_admin: true },
+    { user_id: 1, email: 'sam@umkc.edu', is_admin: true },
     { user_id: 2, email: 'maya@example.com', is_admin: false },
     { user_id: 3, email: 'devin@example.com', is_admin: false },
   ],
   6: [
-    { user_id: 1, email: 'cole@umkc.edu', is_admin: true },
+    { user_id: 1, email: 'sam@umkc.edu', is_admin: true },
     { user_id: 2, email: 'maya@example.com', is_admin: false },
   ],
 };
@@ -61,7 +61,7 @@ const reply = {
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
-  localStorage.setItem('groups:1', JSON.stringify([{ id: 5, name: 'Lake House', type: 'outing' }]));
+  mockGroups(groupsApi, [{ id: 5, name: 'Lake House', type: 'outing' }]);
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockImplementation((id) => Promise.resolve(ok(membersByGroup[id] ?? [])));
@@ -100,14 +100,14 @@ describe('Balances screen', () => {
     await openPage();
     const owes = listItems('Owes you');
     expect(owes).toHaveLength(2);
-    expect(owes[0]).toHaveTextContent('maya@example.com owes you');
+    expect(owes[0]).toHaveTextContent('Maya owes you');
     expect(owes[0]).toHaveTextContent('Lake House');
     expect(owes[0]).toHaveTextContent('+$30.00');
     const owe = listItems('You owe');
     expect(owe).toHaveLength(2);
-    expect(owe[0]).toHaveTextContent('You owe devin@example.com');
+    expect(owe[0]).toHaveTextContent('You owe Devin');
     expect(owe[0]).toHaveTextContent('−$12.50');
-    expect(owe[1]).toHaveTextContent('You owe maya@example.com');
+    expect(owe[1]).toHaveTextContent('You owe Maya');
   });
 
   it('shows "Former member" for someone who left, and "Group 6" when the group name is unknown', async () => {
@@ -142,8 +142,11 @@ describe('Balances screen', () => {
   it('lists every expense when opened, with a minus on the one that takes away from the total', async () => {
     await openPage();
     const maya = within(listItems('Owes you')[0]);
+    expect(maya.queryAllByRole('listitem')).toHaveLength(0); // closed until the caret is pressed
+    fireEvent.click(maya.getByRole('button', { name: 'Show the expenses for Maya' }));
     const lines = maya.getAllByRole('listitem').map((li) => li.textContent);
-    expect(lines).toEqual(['Groceries$20.00', 'Gas$15.00', 'Pizza$5.00', 'Movies$3.00', 'Takeout−$13.00']);
+    // Sam is the admin here, so each line also has its Edit link.
+    expect(lines).toEqual(['Groceries$20.00Edit', 'Gas$15.00Edit', 'Pizza$5.00Edit', 'Movies$3.00Edit', 'Takeout−$13.00Edit']);
     expect(maya.getByText('Amounts with a minus take away from the total.')).toBeInTheDocument();
   });
 
@@ -156,13 +159,64 @@ describe('Balances screen', () => {
     const maya = listItems('Owes you')[0];
     expect(maya).toHaveTextContent('Lake House');
     expect(maya).toHaveTextContent('Groceries');
+    fireEvent.click(within(maya).getByRole('button', { name: 'Show the expenses for Maya' }));
     expect(maya).toHaveTextContent('Settlements are included in the balance.');
+  });
+
+  it('starts every row closed, with one summary line and a caret that is not expanded', async () => {
+    await openPage();
+    const maya = within(listItems('Owes you')[0]);
+    const caret = maya.getByRole('button', { name: 'Show the expenses for Maya' });
+    expect(caret).toHaveAttribute('aria-expanded', 'false');
+    expect(maya.queryAllByRole('listitem')).toHaveLength(0);
+    expect(maya.getByText(/Lake House · Groceries/)).toBeInTheDocument();
+  });
+
+  it('opens and closes one row with its caret, and the label follows', async () => {
+    await openPage();
+    const maya = within(listItems('Owes you')[0]);
+    fireEvent.click(maya.getByRole('button', { name: 'Show the expenses for Maya' }));
+    const caret = maya.getByRole('button', { name: 'Hide the expenses for Maya' });
+    expect(caret).toHaveAttribute('aria-expanded', 'true');
+    expect(maya.getAllByRole('listitem')).toHaveLength(5);
+    fireEvent.click(caret);
+    expect(maya.queryAllByRole('listitem')).toHaveLength(0);
+    expect(maya.getByRole('button', { name: 'Show the expenses for Maya' })).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('has one button that opens every row and then closes them all', async () => {
+    await openPage();
+    listItems('Owes you');
+    const region = within(screen.getByRole('region', { name: 'Who owes you' }));
+    fireEvent.click(region.getByRole('button', { name: 'Expand all' }));
+    const opened = region.getAllByRole('button', { name: /^Hide the expenses for / });
+    expect(opened.length).toBeGreaterThan(1);
+    opened.forEach((b) => expect(b).toHaveAttribute('aria-expanded', 'true'));
+    expect(region.queryByRole('button', { name: 'Expand all' })).toBeNull(); // the same button now says Collapse all
+    fireEvent.click(region.getByRole('button', { name: 'Collapse all' }));
+    expect(region.queryAllByRole('button', { name: /^Hide the expenses for / })).toHaveLength(0);
+    expect(region.getByRole('button', { name: 'Expand all' })).toBeInTheDocument();
+  });
+
+  it('has no pencil or trash buttons on the expense lines', async () => {
+    await openPage();
+    const maya = within(listItems('Owes you')[0]);
+    fireEvent.click(maya.getByRole('button', { name: 'Show the expenses for Maya' }));
+    expect(maya.queryByRole('button', { name: /^Delete / })).toBeNull();
+    expect(document.querySelector('.icon-btn')).toBeNull();
+  });
+
+  it('has no Expand all button when no row has expenses to show', async () => {
+    expensesApi.getGroupExpenses.mockResolvedValue(network);
+    await openPage();
+    listItems('Owes you');
+    expect(screen.queryByRole('button', { name: /^(Expand|Collapse) all$/ })).toBeNull();
   });
 
   it('still shows the balances, without expense lines, when the expenses cannot be loaded', async () => {
     expensesApi.getGroupExpenses.mockResolvedValue(network);
     await openPage();
-    expect(listItems('Owes you')[0]).toHaveTextContent('maya@example.com owes you');
+    expect(listItems('Owes you')[0]).toHaveTextContent('Maya owes you');
     expect(listItems('Owes you')[0]).not.toHaveTextContent('Groceries');
     expect(listItems('Owes you')).toHaveLength(2);
   });
@@ -182,7 +236,7 @@ describe('Balances screen', () => {
     expect(screen.getByText('You’re all paid up.')).toBeInTheDocument();
     expect(screen.getByText('Nobody owes you right now.')).toBeInTheDocument();
     const paid = listItems('You owe');
-    expect(paid[0]).toHaveTextContent('You and maya@example.com are paid up');
+    expect(paid[0]).toHaveTextContent('You and Maya are paid up');
     expect(paid[0]).toHaveTextContent('Paid');
   });
 

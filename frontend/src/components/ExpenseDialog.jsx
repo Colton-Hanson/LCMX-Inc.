@@ -30,10 +30,11 @@ const dayOf = (value) => {
 //   nameOf(id)   the name to show for a user id
 //   canChange    true when this person may edit or delete it
 //   startOnDelete  open straight on the delete question
+//   allowDelete  false hides the Delete button (the Balances page deletes from the edit screen instead)
 //   remove       the delete call (the preview page passes its own)
 //   onEdit(expense)  opens the edit form
 //   onDeleted(expense)  called after it is deleted
-export default function ExpenseDialog({ expense, groupName, nameOf, canChange, startOnDelete = false, remove = deleteExpense, onEdit, onDeleted, onExpired, onClose }) {
+export default function ExpenseDialog({ expense, groupName, nameOf, canChange, startOnDelete = false, allowDelete = true, remove = deleteExpense, onEdit, onDeleted, onExpired, onClose }) {
   const offId = useId();
   const [step, setStep] = useState(startOnDelete && canChange ? 'delete' : 'details');
   const [busy, setBusy] = useState(false);
@@ -75,7 +76,7 @@ export default function ExpenseDialog({ expense, groupName, nameOf, canChange, s
     return (
       <Dialog
         title="Delete this expense?"
-        description={`This deletes “${expense.description}” (${total}) and each person’s share of it. Balances in ${groupName} are worked out again without it, so what people owe each other will change. This can’t be undone.`}
+        description={`This deletes “${expense.description}” (${total}) and each person’s share of it. Balances in ${groupName} are worked out again without it, so what people owe each other will change. Kept: the group, its other expenses, payments already recorded, and the items on any receipt. This can’t be undone.`}
         onClose={onClose}
       >
         {people.length > 0 && (
@@ -126,10 +127,12 @@ export default function ExpenseDialog({ expense, groupName, nameOf, canChange, s
               <Icon name="edit" size={18} />
               Edit
             </button>
-            <button type="button" className="btn btn-danger-outline" onClick={() => setStep('delete')}>
-              <Icon name="trash" size={18} />
-              Delete
-            </button>
+            {allowDelete && (
+              <button type="button" className="btn btn-danger-outline" onClick={() => setStep('delete')}>
+                <Icon name="trash" size={18} />
+                Delete
+              </button>
+            )}
           </>
         )}
         <button type="button" className="btn btn-ghost" data-autofocus onClick={onClose}>Close</button>

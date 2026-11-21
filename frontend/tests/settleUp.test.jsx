@@ -8,8 +8,8 @@ import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
 import * as expensesApi from '../src/api/expenses.js';
 import * as proposedApi from '../src/api/proposed.js';
-import { checkPartAmount, historyText, manualKeys, shortName } from '../src/lib/settle.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { checkPartAmount, historyText, receivedThisMonth, shortName } from '../src/lib/settle.js';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
@@ -29,7 +29,7 @@ const notBuilt = fail(405, { detail: 'Method Not Allowed' });
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
-  localStorage.setItem('groups:1', JSON.stringify([{ id: 5, name: 'Lake House', type: 'outing' }]));
+  mockGroups(groupsApi, [{ id: 5, name: 'Lake House', type: 'outing' }]);
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(members));
@@ -46,10 +46,19 @@ async function openPage() {
   return user;
 }
 
+// Nobody owes you right now, so the page starts on "You owe". Open the other tab to see who paid you.
+async function openOwedOnly() {
+  const user = userEvent.setup();
+  renderApp('/balances');
+  await screen.findByRole('heading', { name: 'Who you owe', level: 2 });
+  await user.click(screen.getByRole('button', { name: /^Show who owes you/ }));
+  return user;
+}
+
 async function openPay(user) {
   await user.click(screen.getByRole('button', { name: /^Show who you owe/ }));
-  await user.click(screen.getByRole('button', { name: 'Pay devin@example.com' }));
-  return screen.getByRole('dialog', { name: 'Pay devin' });
+  await user.click(screen.getByRole('button', { name: 'Pay Devin' }));
+  return screen.getByRole('dialog', { name: 'Pay Devin' });
 }
 
 describe('Settle up helpers', () => {
@@ -74,17 +83,27 @@ describe('Settle up helpers', () => {
   });
 
   it('writes the history line from your side', () => {
-    const names = { 2: 'maya@example.com' };
-    expect(historyText({ paid_by: 1, recipient: 2, recorded_by: 1 }, 1, names)).toBe('You marked a payment to maya@example.com as paid outside the app');
-    expect(historyText({ paid_by: 2, recipient: 1, recorded_by: 2 }, 1, names)).toBe('maya@example.com marked a payment to you as paid outside the app');
-    expect(historyText({ paid_by: 2, recipient: 1, recorded_by: 1 }, 1, names)).toBe('You marked maya@example.com as paid (manual)');
-    expect(historyText({ paid_by: 1, recipient: 2, recorded_by: 2 }, 1, names)).toBe('maya@example.com marked your payment as received');
+    const names = { 2: 'Maya' };
+    expect(historyText({ paid_by: 1, recipient: 2, recorded_by: 1 }, 1, names)).toBe('You marked a payment to Maya as paid outside the app');
+    expect(historyText({ paid_by: 2, recipient: 1, recorded_by: 2 }, 1, names)).toBe('Maya marked a payment to you as paid outside the app');
+    expect(historyText({ paid_by: 2, recipient: 1, recorded_by: 1 }, 1, names)).toBe('You marked Maya as paid (manual)');
+    expect(historyText({ paid_by: 1, recipient: 2, recorded_by: 2 }, 1, names)).toBe('Maya marked your payment as received');
     expect(historyText({ paid_by: 9, recipient: 1, recorded_by: 9 }, 1, names)).toBe('A group member marked a payment to you as paid outside the app');
   });
 
-  it('finds the people you marked received yourself', () => {
-    const keys = manualKeys([{ group_id: 5, paid_by: 2, recipient: 1, recorded_by: 1 }, { group_id: 5, paid_by: 1, recipient: 3, recorded_by: 1 }], 1);
-    expect([...keys]).toEqual(['5-2']);
+  it('adds up what was paid to you this month, per person and in total', () => {
+    const now = new Date(2026, 10, 20); // Nov 20, 2026 (local time)
+    const list = [
+      { group_id: 5, paid_by: 2, recipient: 1, amount: '10.00', settlement_time: '2026-11-03T12:00:00' },
+      { group_id: 5, paid_by: 2, recipient: 1, amount: '2.50', settlement_time: '2026-11-10T12:00:00' },
+      { group_id: 5, paid_by: 2, recipient: 1, amount: '9.00', settlement_time: '2026-10-28T12:00:00' }, // last month
+      { group_id: 5, paid_by: 1, recipient: 3, amount: '4.00', settlement_time: '2026-11-04T12:00:00' }, // you paid
+      { group_id: 5, paid_by: 3, recipient: 2, amount: '7.00', settlement_time: '2026-11-04T12:00:00' }, // not yours
+    ];
+    // list[0] was recorded by you (recorded_by 1); the others were recorded by the payer
+    const withMine = [{ ...list[0], recorded_by: 1 }, { ...list[1], recorded_by: 2 }, ...list.slice(2)];
+    expect(receivedThisMonth(withMine, 1, now)).toEqual({ total: 1250, byRow: { '5-2': 1250 }, manualTotal: 1000, manualByRow: { '5-2': 1000 } });
+    expect(receivedThisMonth(undefined, 1, now)).toEqual({ total: 0, byRow: {}, manualTotal: 0, manualByRow: {} });
   });
 });
 
@@ -133,15 +152,15 @@ describe('Balances: the two cards and the list', () => {
   it('starts on who owes you, with Mark received on each row', async () => {
     await openPage();
     expect(screen.getByRole('button', { name: /^Show who owes you/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Mark received from maya@example.com' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Pay devin@example.com' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark received from Maya' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pay Devin' })).not.toBeInTheDocument();
   });
 
   it('switches to who you owe, with Pay on each row', async () => {
     const user = await openPage();
     await user.click(screen.getByRole('button', { name: /^Show who you owe/ }));
     expect(screen.getByRole('heading', { name: 'Who you owe', level: 2 })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pay devin@example.com' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pay Devin' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Mark received/ })).not.toBeInTheDocument();
   });
 
@@ -151,8 +170,8 @@ describe('Balances: the two cards and the list', () => {
     await user.click(both);
     expect(both).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('heading', { name: 'Between you and others', level: 2 })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pay devin@example.com' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mark received from maya@example.com' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pay Devin' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark received from Maya' })).toBeInTheDocument();
     await user.click(both);
     expect(screen.getByRole('heading', { name: 'Who you owe', level: 2 })).toBeInTheDocument();
   });
@@ -176,19 +195,53 @@ describe('Settle dialog', () => {
   it('opens with a title, a description and the note that no money moves', async () => {
     const user = await openPage();
     const dialog = await openPay(user);
-    expect(dialog).toHaveAccessibleDescription('You owe devin@example.com $12.50 in Lake House.');
+    expect(dialog).toHaveAccessibleDescription('You owe Devin $12.50 in Lake House.');
     expect(within(dialog).getByText(/This app does not move money\./)).toBeInTheDocument();
-    expect(within(dialog).getByRole('group', { name: 'How much did you pay devin?' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('group', { name: 'How much did you pay Devin?' })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Full amount ($12.50)' })).toHaveAttribute('aria-pressed', 'true');
     expect(within(dialog).getByText('Nothing will be left over. This balance will be paid.')).toBeInTheDocument();
   });
 
   it('asks the other way round when they owe you', async () => {
     const user = await openPage();
-    await user.click(screen.getByRole('button', { name: 'Mark received from maya@example.com' }));
-    const dialog = screen.getByRole('dialog', { name: 'Mark received from maya' });
-    expect(dialog).toHaveAccessibleDescription('maya@example.com owes you $30.00 in Lake House.');
-    expect(within(dialog).getByRole('group', { name: 'How much did maya pay you?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Mark received from Maya' }));
+    const dialog = screen.getByRole('dialog', { name: 'Mark received from Maya' });
+    expect(dialog).toHaveAccessibleDescription('Maya owes you $30.00 in Lake House.');
+    expect(within(dialog).getByRole('group', { name: 'How much did Maya pay you?' })).toBeInTheDocument();
+  });
+
+  it('records a part payment from the person who was owed, with them as the payer', async () => {
+    const user = await openPage();
+    await user.click(screen.getByRole('button', { name: 'Mark received from Maya' }));
+    const dialog = screen.getByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Part of it' }));
+    await user.type(within(dialog).getByLabelText('Amount paid'), '10');
+    expect(within(dialog).getByText('$20.00 will stay outstanding.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Mark as paid' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Yes, mark as paid' }));
+    expect(proposedApi.recordSettlement).toHaveBeenCalledWith({ groupId: 5, paidBy: 2, recipient: 1, amount: '10.00' });
+    expect(await screen.findByText(/\$10\.00 marked as paid with Maya..*\$20\.00 is still outstanding\./)).toBeInTheDocument();
+    // the green banner stays until the grey X is pressed
+    await user.click(screen.getByRole('button', { name: 'Dismiss message' }));
+    expect(screen.queryByText(/marked as paid with Maya/)).not.toBeInTheDocument();
+  });
+
+  it('closes when you click the dark area outside the box, the same as Cancel', async () => {
+    const user = await openPage();
+    const dialog = await openPay(user);
+    await user.click(dialog); // inside the box: stays open
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.click(dialog.parentElement); // the dark area around it
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(proposedApi.recordSettlement).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Pay Devin' })).toHaveFocus();
+  });
+
+  it('does not close when a press starts inside the box and lets go outside it', async () => {
+    const user = await openPage();
+    const dialog = await openPay(user);
+    await user.pointer([{ keys: '[MouseLeft>]', target: within(dialog).getByRole('button', { name: 'Part of it' }) }, { keys: '[/MouseLeft]', target: dialog.parentElement }]);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('records the full amount after the confirm step and refreshes the balances', async () => {
@@ -201,24 +254,11 @@ describe('Settle dialog', () => {
     expect(yes).toHaveFocus();
     await user.click(yes);
     expect(proposedApi.recordSettlement).toHaveBeenCalledWith({ groupId: 5, paidBy: 1, recipient: 3, amount: '12.50' });
-    const note = await screen.findByText('$12.50 marked as paid with devin@example.com. It is in the settlement history for both of you.');
+    const note = await screen.findByText('$12.50 marked as paid with Devin. It is in the settlement history for both of you.');
     expect(note.closest('[role="status"]')).toHaveFocus();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     await waitFor(() => expect(expensesApi.getBalances).toHaveBeenCalledTimes(2));
     expect(proposedApi.getGroupSettlements).toHaveBeenCalledTimes(2);
-  });
-
-  it('records a part payment from the person who was owed, with them as the payer', async () => {
-    const user = await openPage();
-    await user.click(screen.getByRole('button', { name: 'Mark received from maya@example.com' }));
-    const dialog = screen.getByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Part of it' }));
-    await user.type(within(dialog).getByLabelText('Amount paid'), '10');
-    expect(within(dialog).getByText('$20.00 will stay outstanding.')).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Mark as paid' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Yes, mark as paid' }));
-    expect(proposedApi.recordSettlement).toHaveBeenCalledWith({ groupId: 5, paidBy: 2, recipient: 1, amount: '10.00' });
-    expect(await screen.findByText(/\$10\.00 marked as paid with maya@example\.com\..*\$20\.00 is still outstanding\./)).toBeInTheDocument();
   });
 
   it('blocks a part amount that is empty, zero, negative, too precise or more than owed', async () => {
@@ -255,8 +295,8 @@ describe('Settle dialog', () => {
     await openPay(user);
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pay devin@example.com' })).toHaveFocus();
-    await user.click(screen.getByRole('button', { name: 'Pay devin@example.com' }));
+    expect(screen.getByRole('button', { name: 'Pay Devin' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Pay Devin' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
@@ -344,23 +384,79 @@ describe('Settlement history', () => {
     const card = within(screen.getByRole('region', { name: 'Settlement history' }));
     const rows = await card.findAllByRole('listitem');
     expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveTextContent('You marked maya@example.com as paid (manual)');
+    expect(rows[0]).toHaveTextContent('You marked Maya as paid (manual)');
     expect(rows[0]).toHaveTextContent('Lake House');
     expect(rows[0]).toHaveTextContent('$10.00');
     expect(rows[0]).toHaveTextContent('Nov 3');
-    expect(rows[1]).toHaveTextContent('You marked a payment to devin@example.com as paid outside the app');
+    expect(rows[1]).toHaveTextContent('You marked a payment to Devin as paid outside the app');
   });
 
-  it('shows the yellow Received (manual) pill on someone you marked yourself', async () => {
-    proposedApi.getGroupSettlements.mockResolvedValue(ok(history));
+  it('shows only payments you are part of, not other people’s payments in the same group', async () => {
+    const others = { id: 3, group_id: 5, paid_by: 2, recipient: 3, amount: '7.00', recorded_by: 2, settlement_time: '2026-11-04T12:00:00' };
+    proposedApi.getGroupSettlements.mockResolvedValue(ok([others, ...history]));
     await openPage();
-    const row = screen.getByRole('button', { name: 'Mark received from maya@example.com' }).closest('li');
-    expect(await within(row).findByText('Received (manual)')).toBeInTheDocument();
+    const card = within(screen.getByRole('region', { name: 'Settlement history' }));
+    const rows = await card.findAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(card.queryByText('$7.00')).not.toBeInTheDocument();
+  });
+
+  // Payments from this month, so they count in the "received this month" card.
+  const now = new Date().toISOString().slice(0, 19);
+  const byMe = { id: 11, group_id: 5, paid_by: 2, recipient: 1, amount: '10.00', recorded_by: 1, settlement_time: now };
+  const byThem = { id: 12, group_id: 5, paid_by: 2, recipient: 1, amount: '5.00', recorded_by: 2, settlement_time: now };
+
+  it('has no yellow pill on a row where the person still owes more (a part payment), only Mark received', async () => {
+    proposedApi.getGroupSettlements.mockResolvedValue(ok([byMe]));
+    await openPage();
+    const row = screen.getByRole('button', { name: 'Mark received from Maya' }).closest('li');
+    await within(screen.getByRole('region', { name: 'Settlement history' })).findAllByRole('listitem'); // the payments have loaded
+    expect(within(row).queryByText('Received (manual)')).not.toBeInTheDocument();
+  });
+
+  it('shows the full amount and how much has been received, from the server’s payments only', async () => {
+    proposedApi.getGroupSettlements.mockResolvedValue(ok([byMe, byThem]));
+    await openPage();
+    const card = screen.getByRole('button', { name: /^Show who owes you/ });
+    // 30.00 still owed + 15.00 already paid this month = 45.00 in all
+    expect(await within(card).findByText('+$45.00')).toBeInTheDocument();
+    expect(within(card).getByText('Actual amount received')).toBeInTheDocument();
+    expect(card).toHaveTextContent('$15.00 of $45.00');
+    expect(within(card).getByText('includes $10.00 marked by you')).toBeInTheDocument();
+  });
+
+  it('shows a green Payment received row for someone who paid you in full, and no yellow line when you marked nothing', async () => {
+    expensesApi.getBalances.mockResolvedValue(ok({ ...reply, group_balances: [line(2, '0.00', '0.00'), line(3, '0.00', '12.50')] }));
+    proposedApi.getGroupSettlements.mockResolvedValue(ok([byThem]));
+    await openOwedOnly();
+    const row = (await screen.findByText('paid you')).closest('li');
+    expect(within(row).getByText('+$5.00')).toBeInTheDocument();
+    expect(within(row).getByText('Payment received')).toBeInTheDocument();
+    expect(screen.queryByText(/marked by you/)).not.toBeInTheDocument();
+  });
+
+  it('shows a yellow pill, not a green one, when you recorded the full payment yourself', async () => {
+    expensesApi.getBalances.mockResolvedValue(ok({ ...reply, group_balances: [line(2, '0.00', '0.00'), line(3, '0.00', '12.50')] }));
+    proposedApi.getGroupSettlements.mockResolvedValue(ok([byMe]));
+    await openOwedOnly();
+    const row = (await screen.findByText('paid you')).closest('li');
+    expect(within(row).getByText('Received (manual)')).toBeInTheDocument();
+    expect(within(row).queryByText('Payment received')).not.toBeInTheDocument();
+  });
+
+  it('leaves out payments from earlier months in the received amount, but still lists them', async () => {
+    const old = { ...byThem, id: 13, settlement_time: '2020-01-05T12:00:00' };
+    proposedApi.getGroupSettlements.mockResolvedValue(ok([old]));
+    await openPage();
+    const card = screen.getByRole('button', { name: /^Show who owes you/ });
+    expect(await within(card).findByText('+$30.00')).toBeInTheDocument();
+    expect(card).toHaveTextContent('$0.00 of $30.00');
+    expect(await within(screen.getByRole('region', { name: 'Settlement history' })).findAllByRole('listitem')).toHaveLength(1);
   });
 
   it('asks every group in the balances and shows their payments together, newest first', async () => {
     expensesApi.getBalances.mockResolvedValue(ok({ ...reply, group_balances: [line(2, '30.00', '0.00'), { ...line(3, '0.00', '12.50'), group_id: 6 }] }));
-    localStorage.setItem('groups:1', JSON.stringify([{ id: 5, name: 'Lake House', type: 'outing' }, { id: 6, name: 'Apartment 4B', type: 'roommate' }]));
+    mockGroups(groupsApi, [{ id: 5, name: 'Lake House', type: 'outing' }, { id: 6, name: 'Apartment 4B', type: 'roommate' }]);
     proposedApi.getGroupSettlements.mockImplementation((id) =>
       Promise.resolve(ok(Number(id) === 5 ? [history[1]] : [{ ...history[0], id: 3, group_id: 6, paid_by: 1, recipient: 3, settlement_time: '2026-11-04T09:00:00' }]))
     );
@@ -410,8 +506,9 @@ describe('Settlement history', () => {
 
 describe('Settle up: accessibility checks', () => {
   it('has no problems on the balances screen', async () => {
-    proposedApi.getGroupSettlements.mockResolvedValue(ok([{ id: 2, group_id: 5, paid_by: 2, recipient: 1, amount: '10.00', recorded_by: 1, settlement_time: '2026-11-03T12:00:00' }]));
-    const user = await openPage();
+    expensesApi.getBalances.mockResolvedValue(ok({ ...reply, group_balances: [line(2, '0.00', '0.00'), line(3, '0.00', '12.50')] })); // a fully paid row, so the yellow pill shows
+    proposedApi.getGroupSettlements.mockResolvedValue(ok([{ id: 2, group_id: 5, paid_by: 2, recipient: 1, amount: '10.00', recorded_by: 1, settlement_time: new Date().toISOString().slice(0, 19) }]));
+    const user = await openOwedOnly();
     await user.click(screen.getByRole('button', { name: 'Show both' }));
     await screen.findByText('Received (manual)');
     expect(await checkA11y()).toHaveNoViolations();
