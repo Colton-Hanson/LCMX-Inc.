@@ -2,7 +2,7 @@
 
 ## How to run it
 
-You need Node.js 20 or newer. The backend must already be running (see the main README).
+You need Node.js 22 or newer. The backend must already be running (see the main README).
 
 ### The frontend
 

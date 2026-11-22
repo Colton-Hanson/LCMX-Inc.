@@ -4,7 +4,7 @@ Small things we could use from the back end are listed in `BACKEND_NOTES.md`.
 
 ## How to run it
 
-You need Node.js 20 or newer. The backend must already be running (see the main README).
+You need Node.js 22 or newer. The backend must already be running (see the main README).
 
 ### The frontend
 
