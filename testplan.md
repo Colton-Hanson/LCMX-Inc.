@@ -89,7 +89,7 @@ These terms are used throughout the three test documents.
 | Close-out | The Friday that ends each one-week iteration, when the full regression runs. |
 | Regression run | Both automated suites, the end-to-end walkthrough and the probes, run on the newest `main`. |
 | Probe | A request sent by hand to the API to check one behavior against real data. |
-| E2E | End-to-end. A real browser (Playwright) driving the running app. |
+| E2E | End-to-end. A real browser (Selenium) driving the running app. |
 | Seed | The script that fills an empty database with the four demo accounts and their groups and expenses. |
 | MUST, SHOULD, COULD | Requirement priority, as set in the Requirements Specification. |
 | Incident | Something a test found that did not match the expected result. Recorded in the Test Reports. |
@@ -156,9 +156,9 @@ Every Friday close-out runs everything, old and new, on the newest `main`. New c
 | Unit | Pure logic with no database: split calculator, expense validation, frontend validators and money formatting | pytest, Vitest | Feature owner; Xander reviews |
 | API integration | Each route against a real PostgreSQL database: status codes, saved rows, authorization, rollback | pytest + FastAPI `TestClient` | Lukas and Xander |
 | Frontend component | Each screen renders, validates, calls the right endpoint and handles errors; the backend is mocked | Vitest + React Testing Library + jsdom | Cole and Xander |
-| End-to-end | A real browser against the running app: two users, a full flow from group to balance | Playwright | Xander |
+| End-to-end | A real browser against the running app: two users, a full flow from group to balance | Selenium | Xander |
 | Accessibility | Automated WCAG 2 A and AA rules on every screen, then a manual keyboard and screen reader pass | axe-core, NVDA or VoiceOver | Cole and Xander |
-| Responsive | No sideways scrolling at a 390 px phone width on every screen | Playwright | Xander |
+| Responsive | No sideways scrolling at a 390 px phone width on every screen | Selenium | Xander |
 | Security | Login required on every protected route, open data exposure, password rule, rate limits, HTTPS, cookies | pytest probes, security checklist | Lukas and Xander |
 | Receipt accuracy | Items, prices, store and date read correctly from 15 synthetic receipts (clean, crumpled, dim, angled, PDF) | Manual run, logged | Xander and Cole |
 | Load | The app stays responsive with several simultaneous users | Load script against the live server | Mick |
@@ -172,7 +172,7 @@ Every Friday close-out runs everything, old and new, on the newest `main`. New c
 | Vitest | 5.0.3 | Frontend tests (`frontend/tests`) |
 | React Testing Library, user-event, jest-dom | 16, 14, 6 | Rendering screens and simulating clicks and typing |
 | jsdom | 24 | A simulated browser for frontend tests |
-| Playwright (Chromium) | Pre-installed | End-to-end walkthrough, phone-width checks, screenshots |
+| Selenium (Chrome or Edge) | 4.36.0. Selenium Manager downloads the driver | End-to-end walkthrough, phone-width checks, screenshots |
 | axe-core | 4.10.2 | Automated accessibility scan |
 | PostgreSQL | 16 | Test databases `shared_expense_dev` and `shared_expense_sprint4_test` |
 | GitHub Actions | Not set up yet | Run both suites on every pull request. Planned for Iteration 6; no workflow on `main` as of Nov 13. |
@@ -298,4 +298,14 @@ npm install
 npm test
 ```
 
-A run is green only when both commands finish with zero failures.
+**Browser walkthrough** (database, backend on port 8000, and frontend on port 5173 already running; from `e2e/`):
+
+```powershell
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m pytest -q
+```
+
+The browser check uses Selenium. It does not replace the unit tests. It saves the user-guide screenshots and writes `userguide-images/checklist.md`. Receipt review is not part of this run.
+
+A unit-test run is green only when the backend, temporary reader, and frontend commands finish with zero failures. The browser walkthrough is a separate check.

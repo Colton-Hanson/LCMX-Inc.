@@ -154,7 +154,7 @@ This creates four accounts, two groups (Apartment 4B and Lake Weekend), one even
 
 # 3 Using the app
 
-The screenshots below are from the app running on Oct 30, 2026, using the sample accounts. The bar across the top of every page has **Home**, **Groups**, **Balances**, an **Add expense** button and your account menu.
+The screenshots below are from a Selenium walkthrough of the running app on Nov 24, 2026. Each step is marked pass, fail, or not run in the [browser checklist](userguide-images/checklist.md). The bar across the top of every page has **Home**, **Groups**, **Balances**, an **Add expense** button and your account menu.
 
 ## 3.1 Create an account and log in
 
@@ -235,6 +235,10 @@ Your share and the balances update as soon as it saves.
 **Balances** shows two totals at the top: **Owed to you** and **You owe**. Below them, **Who owes you** and **Who you owe** list each person, newest first. Open a row to see the expenses. A positive amount is money owed to you.
 
 **Pay** and **Mark received** record a payment that already happened outside the app. The app does not move money. You can record the full amount or part of it. History lists those payments. A mistaken payment cannot be undone in the app.
+
+![Record a partial payment](userguide-images/14-settle.png)
+
+Choose **Part of it**, type the amount, then **Mark as paid** and confirm. Whatever you do not record stays outstanding.
 
 ## 3.9 Group settings
 

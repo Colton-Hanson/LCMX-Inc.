@@ -526,7 +526,7 @@ These are the changes the system needs, sent to the developer who owns each one.
 
 ## 6 Not yet tested
 
-The 15-receipt accuracy run, a live model call, recurring bills, budgets, analysis, activity, notifications, site admin, HTTPS, load, the manual screen reader pass and the first-time-user check. The review, settle, edit and delete, and picture-deletion screens have component tests (passed Nov 24) but were not walked in a browser on that date. The 7 day receipt cleanup job is not built. Each item has a case in the [Test Specification](testspec.md) and a slot in the [Test Plan schedule](testplan.md#10-schedule).
+The 15-receipt accuracy run, a live model call, recurring bills, budgets, analysis, activity, notifications, site admin, HTTPS, load, the manual screen reader pass and the first-time-user check. Settle up was walked in a browser on Nov 24 (section 6.1). Review, edit and delete, and picture deletion have component tests (passed Nov 24) but were not walked in a browser on that date. The 7 day receipt cleanup job is not built. Each item has a case in the [Test Specification](testspec.md) and a slot in the [Test Plan schedule](testplan.md#10-schedule).
 
 ### 6.1 Run on November 24, 2026
 
@@ -537,6 +537,9 @@ Local unit tests after merging `frontend-sprint7` onto local `main`. No push. No
 | Frontend | `npm test` from `frontend/` (Vitest) | 37 files, 587 passed, 0 failed |
 | Temporary reader | `pytest` from `temporary-reader/` | 32 passed, 0 failed. Fake client, no network. The default request is `claude-haiku-5-5`, effort `medium`, thinking `disabled`. |
 | Backend | `pytest` from `backend/` with Postgres running | 264 passed, 6 skipped, 0 failed. The 6 skips are the Sprint 8 cases. On Windows the receipt privacy test checks that the file was written, and it checks Unix permission bits only on POSIX, because Windows stat() does not report them. |
+| Browser walkthrough | `pytest` from `e2e/` with the app on ports 8000 and 5173 | 10 steps passed, 0 failed. Receipt review was not run, because a live read spends the temporary key and there is no sample receipt in the repo. Screenshots are in `userguide-images/`. Checklist: `userguide-images/checklist.md`. 36.06 s. |
+
+The browser check uses Selenium with Chrome or Edge. It does not replace the unit tests above. The Oct 30 run notes still name Playwright because that was the tool recorded for that day.
 
 ---
 
@@ -556,4 +559,4 @@ On Oct 30, all 422 automated tests passed on the pre-merge code. The run found n
 
 On Nov 19 the local suites passed: 264 backend tests, 6 skipped, and 358 frontend tests. The skips are the Sprint 8 cases. Stretch is no-go this week.
 
-Further testing happens as features land. The Friday Nov 20 close-out was the Nov 19 local regression. On Nov 24 the frontend, temporary-reader, and backend suites passed, as recorded in section 6.1. There is no deployed server URL in the README. The full test pass on Wednesday Dec 2 produces the final report.
+Further testing happens as features land. The Friday Nov 20 close-out was the Nov 19 local regression. On Nov 24 the frontend, temporary-reader, and backend suites passed, and a Selenium walkthrough of the user guide passed 10 steps, as recorded in section 6.1. There is no deployed server URL in the README. The full test pass on Wednesday Dec 2 produces the final report.
