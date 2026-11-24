@@ -17,6 +17,6 @@ The first run sets up its own Python environment and installs what it needs, so 
 ## Notes
 
 - It uses the `backend` folder next to this one, and it never changes it. It only reads the backend `.env` for the database address.
-- The API key costs a little per receipt (under a tenth of a cent) and stops working on Nov 23.
+- The API key lives only in `.env` in this folder. Git ignores that file. Never commit it. The reader calls Haiku 5.5 at medium effort with thinking off.
 - To use another backend folder, set `BACKEND_DIR` in this folder's `.env`.
 - Tests (no network): `.venv\Scripts\python.exe -m pytest`

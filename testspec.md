@@ -22,8 +22,8 @@ Viskovic, Lukas
 | Document | Required document 5, part 2 of 3: Test Specification |
 | Other parts | [Test Plan](testplan.md) (part 1) · [Test Reports](testreports.md) (part 3) |
 | Document owner | Xander McKie |
-| Version and date | 1.2 Draft, November 19, 2026 |
-| Status | Draft. Statuses from the Oct 30 run, updated with a code check of `main` at `83aaf1f` (Nov 13). |
+| Version and date | 1.3 Draft, November 24, 2026 |
+| Status | Draft. Iteration 7 screen cases now point at the frontend tests that exist. Older rows still name the Oct 30 and Nov 19 runs. |
 
 ## Revision history
 
@@ -32,6 +32,7 @@ Viskovic, Lukas
 | 1.0 | Oct 30, 2026 | Xander McKie | Test cases as tables in the single Test Documentation file. |
 | 1.1 | Nov 16, 2026 | Xander McKie | One block per case in the course template's fields. Added TC-EXP-17 (recurring bills), TC-RCP-09 and TC-RCP-10 (receipt privacy and rollback, from the new receipt tests) and TC-SOC-02 (notifications). Statuses updated from the Nov 16 code check. |
 | 1.2 | Nov 19, 2026 | Xander McKie | It7 review, settle, and delete cases pointed at the tests that passed on the local suite. Sprint 8 cases noted as written and skipped. |
+| 1.3 | Nov 24, 2026 | Xander McKie | It7 cases now also name the frontend tests for review, settle, edit and delete, picture deletion, and the event picker. The reader cases name the temporary-reader unit tests. |
 
 ## Contents
 
@@ -596,8 +597,8 @@ Use cases UC-04, UC-05 and UC-06.
 | Test Data | Title `Tacos`, $30.00, paid by Alice, event `Dinner`, even split |
 | Test Actions | 1. Add the expense and pick `Dinner` as its event.<br>2. Open Balances as Alice, then as Carol. |
 | Expected Results | Bob owes Alice $15.00 more. Carol's balance does not change. |
-| Covered by | Planned: API and component tests |
-| Status | ⏳ The `event_id` column on expenses was added Nov 13 (`560e479`). The route and the event picker are not on `main` yet (was Iteration 7). |
+| Covered by | `addExpense.test.jsx` (event picker), `test_expense_mutations` (event on create and edit) |
+| Status | ⚠️ The event picker and `event_id` are in the app as of Nov 24. The rule that an event expense includes only that event's members is not enforced by the backend, so this case is not a full pass. |
 
 ### TC-GRP-15: My groups on a second device
 
@@ -613,7 +614,7 @@ Use cases UC-04, UC-05 and UC-06.
 | Test Actions | 1. Log in as Bob in the fresh browser.<br>2. Open Home and `/groups`.<br>3. Open one group by its link. |
 | Expected Results | Both groups are listed by name. The group page shows the group's real name. |
 | Covered by | E2E; `test_groups::test_list_groups_requires_auth`, `test_groups_list_only_accepted_memberships`, `test_group_detail_access_and_members` (added Oct 31) |
-| Status | ❌ Fail (Oct 30, BUG-06). Still open on Nov 16: the backend added `GET /groups`, `GET /groups/{id}` and `GET /groups/{id}/events` at `80d43c6`, but the frontend still reads the lists from browser storage (`groupCache.js`, `eventCache.js`). |
+| Status | ⚠️ API passed earlier. As of Nov 24 the frontend reads `GET /groups` and does not keep the group list in browser storage (`groupCache.js` and `eventCache.js` are gone). A second-device walkthrough was not repeated on Nov 24. |
 
 ---
 
@@ -859,7 +860,7 @@ Use cases UC-07, UC-09 and UC-10.
 | Test Actions | 1. Edit `Gas` to $70.00 and save.<br>2. Open Balances.<br>3. Delete `Gas`, reading the confirmation before confirming.<br>4. Open Balances. |
 | Expected Results | After step 2, Bob owes Alice $35.00. The confirmation in step 3 says what is lost and what is kept. After step 4, Bob owes Alice $0.00. |
 | Covered by | `test_it7_financial_consistency::test_delete_forty_dollar_split_puts_both_balances_back` and `test_delete_after_repayment_creates_refund_obligation`. Edit after a partial payment: `test_edit_after_partial_repayment_recalculates_remaining_debt`. |
-| Status | ⚠️ API passed Nov 19 (local pytest). Hand-worked delete: a $40.00 expense split $20.00 and $20.00, then delete, leaves $0.00. The screen is not in the app. Edit and delete are still admin-only. The agreed rule is payer, creator, and group admin. |
+| Status | ⚠️ API passed Nov 19. The screen is in the app and covered by `expenseEditDelete.test.jsx` (passed Nov 24). Edit and delete are still admin-only. The agreed rule is payer, creator, and group admin. |
 
 ### TC-EXP-16: Settle up in full or in part
 
@@ -874,8 +875,8 @@ Use cases UC-07, UC-09 and UC-10.
 | Test Data | Partial payment: $20.00<br>Too much: $50.00 |
 | Test Actions | 1. Open Settle Up for Alice and read the wording.<br>2. Record $20.00 and confirm.<br>3. Open Balances and history as Bob, then as Alice.<br>4. Try to record $50.00. |
 | Expected Results | Step 1 says the app records a payment made outside it and moves no money. After step 3, $11.62 is left and both users' history shows the payment. Step 4 is refused because it is more than what is owed. A settlement that is never submitted leaves the balance as it was. A member who is not on the debt is refused. |
-| Covered by | `test_settlements::test_partial_repayment_updates_balance_and_history` ($20.00 of $50.00 leaves $30.00), `test_cancelled_settlement_changes_nothing`, `test_unrelated_member_cannot_record` |
-| Status | ⚠️ API passed Nov 19 (local pytest). The settle screen is not in the app. |
+| Covered by | `test_settlements::test_partial_repayment_updates_balance_and_history` ($20.00 of $50.00 leaves $30.00), `test_cancelled_settlement_changes_nothing`, `test_unrelated_member_cannot_record`; `settleUp.test.jsx` |
+| Status | ⚠️ API passed Nov 19. The settle screen is in the app and covered by `settleUp.test.jsx` (passed Nov 24). |
 
 ### TC-EXP-17: Recurring bill repeats monthly
 
@@ -944,8 +945,8 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Data | Recorded reader replies for three receipts (no real AI calls in automated runs) |
 | Test Actions | 1. Run the reading step with a recorded reply.<br>2. Send `GET /receipts/{id}`.<br>3. Open the reading screen. |
 | Expected Results | The status moves from `uploaded` to `reading` to `read`. The reply is checked as valid JSON before saving. Decided Nov 19: the reader returns store, location, date, each item (name, quantity, price, line total), subtotal, tax, tip, and total. Those fields are saved and shown in receipt order. |
-| Covered by | `test_receipts::test_get_receipt_read_returns_ordered_items`, `test_get_receipt_processing_states`; planned pytest with recorded replies |
-| Status | ⏳ The reader (a small Qwen model) is chosen but not connected yet (SCRUM-133). The status route and its tests are merged. |
+| Covered by | `temporary-reader/tests/test_reader.py` (fake client, no network), `test_receipts::test_get_receipt_read_returns_ordered_items`, `test_get_receipt_processing_states` |
+| Status | ⚠️ Unit tests for the temporary reader passed Nov 24 (32 tests, fake client). A live read was not part of that run. The reader is not inside the backend. |
 
 ### TC-RCP-04: AI cannot read it
 
@@ -960,8 +961,8 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Data | A recorded reader reply that cannot be used |
 | Test Actions | 1. Run the reading step with the bad reply.<br>2. Open the receipt's screen. |
 | Expected Results | The status is `failed`, a state of its own, not an upload error. Decided Nov 19: that happens for bad JSON after one retry, a timeout, or no items found. If the items do not add up, the app shows a warning and still lets you review. The screen says it was uploaded but could not be read, and offers manual entry. |
-| Covered by | `test_receipts::test_reading_failure_is_its_own_state`; `receiptScreens.test.jsx`; planned recorded bad reply |
-| Status | 🔁 The `failed` state and its screen were merged Nov 8 to 11. The reader that sets it is not built. |
+| Covered by | `test_receipts::test_reading_failure_is_its_own_state`; `receiptScreens.test.jsx`; `temporary-reader/tests/test_reader.py::test_two_bad_replies_raise` |
+| Status | ⚠️ The `failed` screen is in the app. The temporary reader marks a bad reply as failed after one retry. That path is unit tested with a fake client, not with a live call. |
 
 ### TC-RCP-05: Reading accuracy across lighting and formats
 
@@ -977,7 +978,7 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Actions | 1. Upload each receipt.<br>2. Compare the store, date, items and prices to the answer key.<br>3. Record the accuracy for each condition. |
 | Expected Results | Accuracy for each condition is logged in the Test Reports and meets the NFR-PER-02 target. |
 | Covered by | Manual |
-| Status | ⏳ Waits for the reader to be connected (was Iteration 6). |
+| Status | ⏳ The temporary reader is connected for local use. The 15-receipt accuracy run has not been done. |
 
 ### TC-RCP-06: Review and assign items
 
@@ -992,8 +993,8 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Data | One item renamed and repriced; one item assigned to two of the members, not all (OI-16); one item left unassigned |
 | Test Actions | 1. Open the review screen.<br>2. Edit, assign and leave items as in the test data.<br>3. Look at each person's total before saving. |
 | Expected Results | Every item can be edited. An item can be shared by some people, and the people left off it do not take a share. The unassigned item is left out. $10.00 across three people is accepted as 3.34, 3.33, and 3.33. 3.33 three times is refused and writes nothing. |
-| Covered by | `test_receipt_confirmation::test_ten_dollar_line_shared_by_two_of_three_leaves_the_third_unchanged`, `test_unassigned_item_is_excluded`, `test_ten_dollars_across_three_people_accepts_the_extra_cent`, `test_shares_short_one_cent_are_rejected_and_save_nothing` |
-| Status | ⚠️ API passed Nov 19 (local pytest). The review screen is not in the app. |
+| Covered by | `test_receipt_confirmation::test_ten_dollar_line_shared_by_two_of_three_leaves_the_third_unchanged`, `test_unassigned_item_is_excluded`, `test_ten_dollars_across_three_people_accepts_the_extra_cent`, `test_shares_short_one_cent_are_rejected_and_save_nothing`; `receiptReview.test.jsx` |
+| Status | ⚠️ API passed Nov 19. The review screen tests in `receiptReview.test.jsx` passed in the Nov 24 frontend run (587 tests, no failures). A browser walkthrough with a live receipt was not repeated that day. |
 
 ### TC-RCP-07: Cancel the review, then save
 
@@ -1008,8 +1009,8 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Data | None beyond the initial conditions |
 | Test Actions | 1. Press Cancel.<br>2. Open the review again, fill it in and press Save.<br>3. Open Balances. |
 | Expected Results | After step 1, nothing is saved. The receipt stays at `read`, with no expense and no balance change. After step 2, one expense with its splits and balances is saved and the receipt is marked confirmed. The picture stays until someone deletes it. Step 3 shows the new balances. |
-| Covered by | `test_receipt_confirmation::test_cancel_confirm_saves_nothing`, `test_confirmation_persists_everything_atomically` |
-| Status | ⚠️ API passed Nov 19 (local pytest). The review screen is not in the app. |
+| Covered by | `test_receipt_confirmation::test_cancel_confirm_saves_nothing`, `test_confirmation_persists_everything_atomically`; `receiptReview.test.jsx` |
+| Status | ⚠️ API passed Nov 19. The review screen is in the app and covered by `receiptReview.test.jsx` (passed Nov 24). |
 
 ### TC-RCP-08: Delete the receipt picture, keep the items
 
@@ -1024,8 +1025,8 @@ Use cases UC-02, UC-08 and UC-14. Uploading works on `main` (merged Nov 8 to 11)
 | Test Data | A forced delete failure for step 3 |
 | Test Actions | 1. Press Delete picture and read the confirmation.<br>2. Confirm.<br>3. Repeat on another receipt with the delete forced to fail. |
 | Expected Results | The confirmation says the items are kept. After step 2, the picture is gone and the items remain. After step 3, the picture is still there. A picture nobody confirms is kept 7 days, then deleted, and the receipt is marked abandoned. |
-| Covered by | `test_receipt_management::test_delete_picture_preserves_items_expense_and_receipt`, `test_failed_commit_restores_original_picture` |
-| Status | ⚠️ API passed Nov 19 (local pytest). The dialog is not in the app. The 7 day cleanup job is not built. The `abandoned` status exists. |
+| Covered by | `test_receipt_management::test_delete_picture_preserves_items_expense_and_receipt`, `test_failed_commit_restores_original_picture`; `deletePicture.test.jsx` |
+| Status | ⚠️ API passed Nov 19. The dialog is in the app and covered by `deletePicture.test.jsx` (passed Nov 24). The 7 day cleanup job is not built. The `abandoned` status exists. |
 
 ### TC-RCP-09: Receipts stay private to the group
 

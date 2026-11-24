@@ -1,4 +1,4 @@
-// auth.test.js — checks that auth.js sends exactly what the backend expects.
+// auth.test.js: checks that auth.js sends exactly what the backend expects.
 // `fetch` (the browser's network call) is replaced with a fake that records what it was asked to send,
 // so no server is needed. Run with: npm test
 

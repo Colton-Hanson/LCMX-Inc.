@@ -1,4 +1,4 @@
-// balances.js — turns the GET /balances reply into the rows and totals the Balances page shows.
+// balances.js: turns the GET /balances reply into the rows and totals the Balances page shows.
 // The reply has ids only, so the page passes in the emails and group names to put next to them.
 
 import { toDate } from './settle.js';

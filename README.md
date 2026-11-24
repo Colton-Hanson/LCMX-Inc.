@@ -8,7 +8,7 @@
 
 ---
 
-**Getting it running.** Prerequisites: Docker Desktop, Python 3.12 specifically (not whatever `python` resolves to on your machine, 3.12 is the version the pinned packages install cleanly against), and Node.js 20 or newer.
+**Getting it running.** Prerequisites: Docker Desktop, Python 3.12 specifically (not whatever `python` resolves to on your machine, 3.12 is the version the pinned packages install cleanly against), and Node.js 22 or newer.
 
 ```bash
 git clone [repo-url]
@@ -70,43 +70,48 @@ Alice administers Apartment 4B (roommate). Bob and Carol are accepted members. D
 
 ```text
 DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/shared_expense_dev
-JWT_SECRET=<output of: python -c "import secrets; print(secrets.token_hex(32))">
+SESSION_EXPIRE_HOURS=168
+COOKIE_SECURE=false
+EMAIL_VERIFICATION_SECRET=<output of: python -c "import secrets; print(secrets.token_hex(32))">
+EMAIL_VERIFICATION_EXPIRE_MINUTES=30
 RECEIPT_UPLOAD_DIR=backend/uploads/receipts
 MAX_RECEIPT_MB=10
 ```
 
-`.env` is git-ignored. Don't commit a real secret. That's not a suggestion, it's NFR-SEC-06. You can leave `RECEIPT_UPLOAD_DIR` and `MAX_RECEIPT_MB` out of `.env`. The lines above are the defaults.
+`.env` is git-ignored. Don't commit a real secret. That's not a suggestion, it's NFR-SEC-06. You can leave `RECEIPT_UPLOAD_DIR` and `MAX_RECEIPT_MB` out of `.env`. The lines above are the defaults. The receipt reader's key does not go in this file. It goes in `temporary-reader/.env`.
 
 **Receipt upload.** A signed-in group member sends a JPEG or PDF to `POST /receipts` with form fields `group_id` and `file`. A good file is stored and the receipt row is created with status `uploaded`. The wrong type, a file over the size limit, and a corrupt or empty file are refused with a cause and a next step. Nothing is saved in those cases.
 
 `RECEIPT_UPLOAD_DIR` is where those files go. If it is unset, the default is `backend/uploads/receipts`. The directory is created so only the server user can open it, and each file is private too. `MAX_RECEIPT_MB` is the size limit in megabytes. It defaults to 10.
 
-**AI.** The upload route does not read an API key, a model name, or any other AI setting. There is nothing to put in `.env` for the reader yet. A receipt stays at `uploaded` until that step exists. When reading fails later, the status is `failed`. That is a different outcome from an upload rejection.
+**AI.** The upload route still does not call a model. A receipt stays at `uploaded` until the temporary reader in `temporary-reader/` is running. That reader polls the database, calls a hosted model (Haiku 5.5, medium effort, thinking off), and sets the receipt to `read` or `failed`. A failed read is a different outcome from an upload rejection.
 
-A note on `db_starter/`: that folder is Mick's schema notes and early migration drafts, not the startup path. It uses a different port and password than the Docker database above. Run the app from `backend/` as described, treat `db_starter/` as reference, not instructions.
+The reader's key, model, effort, and thinking settings live only in `temporary-reader/.env`, which git ignores. Never commit that file. Copy nothing secret into the backend `.env`. See `temporary-reader/README.md` for how to start it. Delete that folder when the real reader is built into the backend.
+
+A note on `db_starter_old/`: that folder is Mick's schema notes and early migration drafts, not the startup path. It uses a different port and password than the Docker database above. Run the app from `backend/` as described, treat `db_starter_old/` as reference, not instructions.
 
 ---
 
 **How to actually use the thing**, as it stands today. This is the part a grader or a demo audience sees, so it's worth knowing cold, and worth being honest about what's real versus planned.
 
-**Built and working in the browser:** register with an email and a password (eight characters, one capital letter, one symbol, typed twice), log in, change settings, and log out. Home lists your groups and your pending invites. From there you can create a group, invite people, accept or decline an invite, open a group, create an event, and remove a member from Group settings. Any unknown URL redirects to /login, and the signed-in pages do the same when there is no valid session.
+**Built and working in the browser (as of Nov 24, 2026):** register with an email and a password (eight characters, one capital letter, one symbol, typed twice), log in, change settings, and log out. Home lists your groups and your pending invites from the server. From there you can create a group, invite people, accept or decline an invite, open a group, create an event, and remove a member from Group settings. You can add an expense with an even, custom, or percentage split, edit or delete a manual expense (group admin), see balances, and record a settlement (Pay or Mark received). You can upload a JPEG or PDF receipt. With the temporary reader running, the app moves on to check and assign items, then save them as an expense. You can delete the receipt picture and keep the items. Any unknown URL redirects to /login, and the signed-in pages do the same when there is no valid session.
 
-**Built and working in the API:** the same group, invitation, membership, and event actions. The curl section below is that path. The browser lists of groups and events are remembered on this device until the backend has list routes. A cleared browser, or a different computer, starts those lists empty. Membership and invitations still come from the server.
+**Built and working in the API:** the same group, invitation, membership, event, expense, balance, receipt, and settlement actions. Groups and events come from the server, so a cleared browser still shows them after you log in.
 
-**Planned, not built yet:** manual and receipt-based expense entry, splits and balances, budgets, and the analysis page. The product vision in the opening paragraph above describes where this is headed, not what's demoable right now. Update this section as each piece actually lands, don't let the walkthrough get ahead of the code again.
+**Planned, not built yet:** budgets, monthly analysis, activity history, notifications, and the admin dashboard. The receipt reader is a stand-in process, not a route inside the backend. The product vision in the opening paragraph describes where this is headed. Update this section as each piece actually lands.
 
 ---
 
 **Groups and events, in the browser.** Both servers from the setup above have to be running. Open `http://localhost:5173`, register or log in, and use two accounts if you want to see an invite answered by someone else. A second browser profile, or a private window, keeps the second login.
 
 1. Home shows a greeting, **Your groups**, and **Pending invites**. Accept or Decline updates the lists on that page without a refresh.
-2. **Groups** (`/groups`) shows the groups saved on this device and a Create group button.
+2. **Groups** (`/groups`) shows the groups from the server and a Create group button.
 3. Create group (`/groups/new`): enter a name, pick `roommate`, `partner`, `family`, or `outing`, and invite people by email. Cancel saves nothing. Success opens the group page. You are the accepted administrator.
 4. An invite to an email with no account is reported as registration required, and no membership is created. An email that already belongs to the group is refused.
 5. The invited person logs in, sees the invite on Home, and accepts or declines it. Only they can answer, and only while it is pending. An accepted group shows up under Your groups on that device.
 6. The group page (`/groups/:groupId`) shows the name, type, and accepted members, plus New event and Group settings.
-7. New event (`/groups/:groupId/events/new`): enter a name, then choose All members or pick people. Create event stays off until at least one member is selected. An empty member list is rejected. The new event is listed on the group page from this browser's cache.
-8. Group settings (`/groups/:groupId/settings`): accepted members are Admin or Member, and pending invites are listed too. Add a member by email. Remove is for administrators. A member whose balance is zero is removed immediately. The group's only administrator cannot be removed. A nonzero balance is supposed to warn and wait for confirmation, but `get_member_balance()` still returns `0.0` because expenses are not built, so that warning does not appear against the live server. The backend tests `test_balance_requires_confirmation` and `test_balance_removal_with_confirmation` cover it with a stubbed $25 balance. Handing the admin role to someone else is not available yet.
+7. New event (`/groups/:groupId/events/new`): enter a name, then choose All members or pick people. Create event stays off until at least one member is selected. An empty member list is rejected. The new event is listed on the group page from the server.
+8. Group settings (`/groups/:groupId/settings`): accepted members are Admin or Member, and pending invites are listed too. Add a member by email. Remove is for administrators. A member whose balance is zero is removed immediately. The group's only administrator cannot be removed. A nonzero balance warns and waits for confirmation. `get_member_balance()` sums that member's rows in `balances` for the group. Handing the admin role to someone else is not available yet.
 
 **The same flow over the API.** The server is `http://localhost:8000`. The same endpoints are listed at `http://localhost:8000/docs`. These steps use `curl` because two people need two session cookies, and one browser tab only keeps one.
 
@@ -198,7 +203,7 @@ Removal has three cases. Only an administrator can remove someone, and removal d
 curl -s -b ada.cookies -X DELETE http://localhost:8000/groups/GROUP_ID/members/BAILEY_ID
 ```
 
-2. A member with a nonzero balance is refused with 409 until the caller sends `?confirm=true`. `get_member_balance()` still returns `0.0` for everyone, because expenses are not built yet, so this warning does not appear against the live server. The tests `test_balance_requires_confirmation` and `test_balance_removal_with_confirmation` cover it by stubbing a $25 balance.
+2. A member with a nonzero balance is refused with 409 until the caller sends `?confirm=true`. `get_member_balance()` sums that member's `balances` rows for the group. The tests `test_balance_requires_confirmation` and `test_balance_removal_with_confirmation` cover the warning.
 
 3. The group's only administrator cannot be removed. This returns 409, and Ada is still a member.
 
@@ -213,13 +218,13 @@ curl -s -b ada.cookies -X DELETE http://localhost:8000/groups/GROUP_ID/members/A
 .
 ├── backend/
 │   ├── app/
-│   │   ├── api/            # auth, profile, groups, invitations, memberships, events
+│   │   ├── api/            # auth, profile, groups, invitations, memberships, events, expenses, receipts, settlements
 │   │   ├── core/           # security.py
 │   │   ├── db/             # session.py
 │   │   ├── schemas/        # request/response schemas
 │   │   └── main.py
 │   ├── alembic/
-│   │   └── versions/       # through 460471bcd085 (group id on receipts)
+│   │   └── versions/       # through the Iteration 7 receipt and settlement migrations
 │   ├── tests/
 │   ├── models.py
 │   ├── requirements.txt
@@ -232,14 +237,22 @@ curl -s -b ada.cookies -X DELETE http://localhost:8000/groups/GROUP_ID/members/A
 │   │   ├── lib/
 │   │   └── pages/
 │   └── tests/
-├── db_starter/             # schema notes, not the startup path
+├── temporary-reader/       # stand-in receipt reader; its .env is git-ignored
+├── db_starter_old/         # schema notes, not the startup path
 ├── docker-compose.yml
 ├── projectcharter.md
-└── projectrequirements.md
+├── projectrequirements.md
+├── planningdoc.md
+├── systemarchitecture.md
+├── testplan.md
+├── testspec.md
+├── testreports.md
+├── teameffortestimation.md
+└── userguide.md
 ```
 
 
-**Tests.** From `backend`, with the virtualenv active and Postgres migrated: `pytest`. That suite includes creating a group, inviting then accepting or declining, the three removal cases (zero balance, outstanding balance, sole administrator), and an event with zero members. From `frontend`: `npm test`. The frontend tests do not need the database. The backend tests do.
+**Tests.** From `backend`, with the virtualenv active and Postgres migrated: `pytest`. That suite includes creating a group, inviting then accepting or declining, the three removal cases (zero balance, outstanding balance, sole administrator), expenses, receipts, and settlements. From `frontend`: `npm test` (587 tests on Nov 24, 2026). The frontend tests do not need the database. The backend tests do. From `temporary-reader`, after its own virtualenv is installed: `pytest` (32 tests, no network).
 
 The Charter and NFR-QUA-01 name unittest (PyUnit). This repo uses pytest for the backend and Vitest for the frontend. That is the recorded exception for OI-26. pytest can still run unittest-style tests, so a test written for PyUnit is not lost.
 

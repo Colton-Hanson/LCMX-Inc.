@@ -1,4 +1,4 @@
-// expensesApi.test.js — checks that expenses.js sends exactly what the backend expects.
+// expensesApi.test.js: checks that expenses.js sends exactly what the backend expects.
 // `fetch` is replaced with a fake that records what it was asked to send, so no server is needed. Run with: npm test
 
 import { vi } from 'vitest';

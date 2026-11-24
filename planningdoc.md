@@ -10,7 +10,7 @@
 | Student document owner | Xander McKie |
 | Instructor | Prof. Jawad |
 | Sponsor or client | Commerce Bank |
-| Version and date | 1.0 Draft, October 29, 2026 |
+| Version and date | 1.1 Draft, November 24, 2026 |
 | Approval status | Draft |
 
 > Repository: <https://github.com/Colton-Hanson/LCMX-Inc.> · Live backlog: JIRA (SCRUM project) · Companion documents: Project Charter, Requirements Specification, System Architecture.
@@ -21,6 +21,7 @@
 |---|---|---|---|---|
 | 0.1 | Oct 15, 2026 | Xander McKie | First project plan (`planningdoc.md`) baselined from the Charter, Requirements, and Iteration Plan | Team |
 | 1.0 | Oct 29, 2026 | Xander McKie | Reformatted to the course plan template; status updated to the repository as of Oct 29; open-issue answers and Sprint 4 results added | Pending team review |
+| 1.1 | Nov 24, 2026 | Xander McKie | Status moved to the local main that includes Iteration 7 backend and the Sprint 7 frontend. Iteration 8 and 9 features are still not in the repo. | Pending team review |
 
 ## Contents
 
@@ -57,7 +58,7 @@
 
 Work runs in one-week iterations (sprints), Monday to Friday, from Iteration 0 (Sep 23) through Iteration 10 (ending Dec 4), with final delivery on **Dec 7, 2026**. The sprint backlog lives in JIRA; this plan is the project-level view. Iterations 0 to 5 follow the Iteration Plan; Iterations 6 to 10 are candidate backlogs, refined at each Friday close-out. When the schedule slips, COULD requirements are cut first, then SHOULD; MUST requirements are not cut.
 
-**Where we are (Oct 29):** Iterations 0 to 4 are merged to `main`. Iteration 5 (Oct 26 to 30) is the prototype demo: bug fixes, demo data, and no new features.
+**Where we are (Nov 24):** Iterations 0 to 7 are on local `main`. That includes receipt upload, a temporary receipt reader (Haiku 5.5, not inside the backend), review and assign, edit and delete expense, settle up, and receipt picture deletion. Iteration 8 (budgets, analysis, activity) was not built. Iteration 9 (Nov 23 to 27) is this week: admin, activity, and polish are not started. The reader key stays in `temporary-reader/.env` and is not committed.
 
 An analogy: this is a road trip with a fixed arrival time. The route (iterations) is fixed, and the stops (features) are what we trim if we fall behind.
 
@@ -89,8 +90,8 @@ Dates are the Iteration Plan dates. The Charter dates for M3 to M8 are earlier b
 | M2 | Foundations | Sep 25 | Sep 25 | Charter, requirements, architecture drafted; repo and environments set up | Done |
 | M3 | Accounts and database | Oct 2 | Oct 9 (end It2) | PostgreSQL schema; register, login, hashing, persistent sessions, guest redirect, profile and settings; test harness | Done |
 | M4 | Core ledger | Oct 16 | Oct 23 (end It4) | Groups, events, members, manual expenses, all split methods, autosplit, running balances | Done (merged Oct 27) |
-| Prototype | Prototype demo | none | Oct 30 (end It5) | Demo of the built app plus Figma/mockup screens; no new features | In progress |
-| M5 | Receipts | Oct 30 | Nov 13 (end It7) | Upload from file, gallery and camera; LLM extraction to JSON; review-and-assign screen; failed upload and failed read handled; receipt deletion | Planned |
+| Prototype | Prototype demo | none | Oct 30 (end It5) | Demo of the built app plus Figma/mockup screens; no new features | Done |
+| M5 | Receipts | Oct 30 | Nov 13 (end It7) | Upload from file, gallery and camera; LLM extraction to JSON; review-and-assign screen; failed upload and failed read handled; receipt deletion | Partly done (Nov 24). Upload, review, failed read, and picture delete are in the repo. The reader is a temporary stand-in. The 15-receipt accuracy run is not done. |
 | M6 | Money, insight, admin | Nov 13 | Nov 27 (end It9) | Budgets and goals, analysis, settle debt, activity, notifications, admin dashboard with the privacy boundary; feature freeze | Planned |
 | M7 | Hardening | Nov 27 | Dec 4 (end It10) | Full test pass with report; security and ADA checklists; load check; User Guide complete | Planned |
 | M8 | Final delivery | Dec 2 | Dec 7 | Final presentation, live demo of all core features, source files | Planned |
@@ -129,12 +130,12 @@ Priority: **M** = MUST, **S** = SHOULD, **C** = COULD (as in the Requirements Sp
 | 3 | Events (member subsets) | FR-GRP-13 to 16 | M | It3 | Done (event-expense link pending) |
 | 4 | Manual expense, even/custom/percentage splits, autosplit | FR-EXP-01 to 05, FR-SPL-03, 04, 06, 07, 08, 10 | M | It4 | Done |
 | 5 | Balances | FR-SPL-11, 12 | M | It4 | Done |
-| 6 | Prototype demo | n/a | n/a | It5 | In progress |
-| 7 | Receipt upload and AI reading | FR-EXP-10 to 17 | M | It6 | Planned |
-| 8 | Edit and delete expense | FR-EXP-32, NFR-DAT-02 | M | It6 | Planned (not yet placed in the Iteration Plan) |
-| 9 | Review and assign extracted items | FR-EXP-20 to 26 | M | It7 | Planned |
-| 10 | Settle debt (full or partial) | FR-SPL-13 to 17 | M | It7 | Planned |
-| 11 | Delete receipt picture, keep items | FR-EXP-30, 31, 33 | S | It7 | Planned |
+| 6 | Prototype demo | n/a | n/a | It5 | Done |
+| 7 | Receipt upload and AI reading | FR-EXP-10 to 17 | M | It6 | Partly done. Upload is in the repo. Reading is the temporary reader, not a backend route. |
+| 8 | Edit and delete expense | FR-EXP-32, NFR-DAT-02 | M | It6 | Done in the API and the app (admin only, as the server allows) |
+| 9 | Review and assign extracted items | FR-EXP-20 to 26 | M | It7 | Done in the API and the app |
+| 10 | Settle debt (full or partial) | FR-SPL-13 to 17 | M | It7 | Done in the API and the app |
+| 11 | Delete receipt picture, keep items | FR-EXP-30, 31, 33 | S | It7 | Done in the API and the app. The 7 day cleanup job is not built. |
 | 12 | Budgets, goals, analysis | FR-BUD-01 to 06, FR-ANL-01 to 05 | M/S | It8 | Planned |
 | 13 | Recurring expenses | FR-EXP-06 | S | It8 | Planned |
 | 14 | Admin dashboard (aggregate only), activity | FR-ADM-01 to 07, FR-SOC-01 | M/S | It9 | Planned |
@@ -418,7 +419,7 @@ Likelihood and impact: L (low), M (medium), H (high). R-1 to R-7 are the Charter
 
 | ID | Issue | Raised | Owner | Action | Status |
 |---|---|---|---|---|---|
-| I-1 | LLM vendor not yet confirmed (OI-03) | Oct 26 | Cole | Decide before Nov 2 | Open |
+| I-1 | LLM vendor not yet confirmed (OI-03) | Oct 26 | Cole | Temporary reader uses Haiku 5.5 (medium effort, thinking off). The in-backend reader is still not built. | Temporary choice, Nov 24 |
 | I-2 | Tests use pytest and Vitest; the Charter and this team's earlier plan name unittest (OI-26) | Oct 29 | Xander | Record the exception in the README, Requirements, and Plan | Open |
 | I-3 | `GET /users` has no authentication (R-15) | Oct 29 | Lukas | Remove or protect, with a test | Open |
 | I-4 | Password complexity enforced only in the browser (R-15) | Oct 29 | Lukas | Add server rule and test | Open |

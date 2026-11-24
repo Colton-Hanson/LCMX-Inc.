@@ -20,9 +20,9 @@ Viskovic, Lukas
 | Field | Entry |
 |---|---|
 | Document | Required document 5, part 3 of 3: Test Reports |
-| Other parts | [Test Plan](testplan.md) (part 1) · [Test Specification](testspecification.md) (part 2) |
+| Other parts | [Test Plan](testplan.md) (part 1) · [Test Specification](testspec.md) (part 2) |
 | Document owner | Xander McKie |
-| Version and date | 1.2 Draft, November 19, 2026 |
+| Version and date | 1.3 Draft, November 24, 2026 |
 | Status | Draft. A new run is added at every close-out. The final report comes from the full test pass on Dec 2. |
 
 ## Revision history
@@ -32,6 +32,7 @@ Viskovic, Lukas
 | 1.0 | Oct 30, 2026 | Xander McKie | Oct 30 test run, as Section 3 of the single Test Documentation file. |
 | 1.1 | Nov 16, 2026 | Xander McKie | Moved into its own document in the course template's format: incidents, defects and changes. Added the Nov 16 code check of `main`. |
 | 1.2 | Nov 19, 2026 | Xander McKie | Local regression after bringing Iteration 7 onto `main`. Leftovers, stretch no-go, and the ticket comments for this week. |
+| 1.3 | Nov 24, 2026 | Xander McKie | Added the Nov 24 local run: frontend 587 passed, temporary reader 32 passed, backend 264 passed and 6 skipped. Specification link fixed to `testspec.md`. |
 
 ## Contents
 
@@ -525,7 +526,17 @@ These are the changes the system needs, sent to the developer who owns each one.
 
 ## 6 Not yet tested
 
-AI reading and the receipt accuracy run, the review screen, receipt picture deletion in the browser, the edit and delete screens, the settle screen, tagging an expense to an event, recurring bills, budgets, analysis, activity, notifications, site admin, HTTPS, load, the manual screen reader pass and the first-time-user check. The receipt screens added Nov 11 have not been checked at phone width or scanned for accessibility. The API for review math, cancel confirm, picture deletion, delete-reverses-balance, partial settle, cancel settle, and a third person settling someone else's debt passed on Nov 19. Each item has a case in the [Test Specification](testspec.md) and a slot in the [Test Plan schedule](testplan.md#10-schedule).
+The 15-receipt accuracy run, a live model call, recurring bills, budgets, analysis, activity, notifications, site admin, HTTPS, load, the manual screen reader pass and the first-time-user check. The review, settle, edit and delete, and picture-deletion screens have component tests (passed Nov 24) but were not walked in a browser on that date. The 7 day receipt cleanup job is not built. Each item has a case in the [Test Specification](testspec.md) and a slot in the [Test Plan schedule](testplan.md#10-schedule).
+
+### 6.1 Run on November 24, 2026
+
+Local unit tests after merging `frontend-sprint7` onto local `main`. No push. No live receipt was sent to the model.
+
+| Suite | Command | Result |
+|---|---|---|
+| Frontend | `npm test` from `frontend/` (Vitest) | 37 files, 587 passed, 0 failed |
+| Temporary reader | `pytest` from `temporary-reader/` | 32 passed, 0 failed. Fake client, no network. The default request is `claude-haiku-5-5`, effort `medium`, thinking `disabled`. |
+| Backend | `pytest` from `backend/` with Postgres running | 264 passed, 6 skipped, 0 failed. The 6 skips are the Sprint 8 cases. On Windows the receipt privacy test checks that the file was written, and it checks Unix permission bits only on POSIX, because Windows stat() does not report them. |
 
 ---
 
@@ -545,4 +556,4 @@ On Oct 30, all 422 automated tests passed on the pre-merge code. The run found n
 
 On Nov 19 the local suites passed: 264 backend tests, 6 skipped, and 358 frontend tests. The skips are the Sprint 8 cases. Stretch is no-go this week.
 
-Further testing happens as features land. The Friday Nov 20 close-out was this local regression. There is no deployed server URL in the README. The full test pass on Wednesday Dec 2 produces the final report.
+Further testing happens as features land. The Friday Nov 20 close-out was the Nov 19 local regression. On Nov 24 the frontend, temporary-reader, and backend suites passed, as recorded in section 6.1. There is no deployed server URL in the README. The full test pass on Wednesday Dec 2 produces the final report.

@@ -6,7 +6,9 @@ It writes through the backend's own models, so it uses the same rules.
 
 Settings:
   RECEIPT_READER_API_KEY    the API key (required, never printed)
-  RECEIPT_READER_MODEL      optional model name
+  RECEIPT_READER_MODEL      optional model name (default: claude-haiku-5-5)
+  RECEIPT_READER_EFFORT     optional effort (default: medium)
+  RECEIPT_READER_THINKING   optional; default disabled so the call does not think
   RECEIPT_READER_MAX_CALLS  optional cap on live calls, counted across restarts
   RECEIPT_READER_RUN_DIR    optional folder for the usage and results files (default: runs)
   BACKEND_DIR               the backend folder to use (default: the backend folder next to this one)
@@ -180,6 +182,11 @@ def claim_next(models, Session):
 
 
 def save_result(models, Session, receipt_id, found):
+    """Writes store, date and items, then marks the receipt read.
+
+    Skips the write if the row is no longer "reading", so a second worker cannot
+    save over a receipt someone else already finished.
+    """
     stored = to_backend(found)
     with Session() as db:
         receipt = db.get(models.Receipt, receipt_id, with_for_update=True)
@@ -200,6 +207,7 @@ def save_result(models, Session, receipt_id, found):
 
 
 def mark_failed(models, Session, receipt_id, error):
+    """Marks a still-reading receipt failed. A row that already moved on is left alone."""
     with Session() as db:
         receipt = db.get(models.Receipt, receipt_id, with_for_update=True)
         if receipt is not None and receipt.status == "reading":
@@ -209,12 +217,14 @@ def mark_failed(models, Session, receipt_id, error):
 
 
 def record(receipt_id, seconds, found=None, error=None):
+    """Appends one local result line so a run can be scored later. The API key is never written."""
     RUNS.mkdir(exist_ok=True)
     with RESULTS_FILE.open("a", encoding="utf-8") as out:
         out.write(json.dumps({"receipt_id": receipt_id, "seconds": seconds, "found": found, "error": error}) + "\n")
 
 
 def handle(models, Session, client, receipt_id):
+    """Reads one claimed receipt. Any failure becomes status failed, and the same API error three times stops the worker."""
     with Session() as db:
         receipt = db.get(models.Receipt, receipt_id)
         file_type = receipt.file_type

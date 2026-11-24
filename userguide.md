@@ -9,7 +9,7 @@
 | Document owner | Xander McKie |
 | Instructor | Prof. Jawad |
 | Sponsor | Commerce Bank |
-| Version and date | 1.1 Draft, November 19, 2026 (Iterations 0 to 5 in the app, Iteration 7 on the API) |
+| Version and date | 1.2 Draft, November 24, 2026 (Iterations 0 to 7 in the app, except budgets, analysis, and admin) |
 | Status | Draft. A section is added as each feature ships; complete in Iteration 10 (Dec 4). |
 
 ## Contents
@@ -28,15 +28,16 @@ The Shared Expense Management Tool keeps a shared ledger for people who split co
 
 It never connects to a bank and never moves money. When someone pays you back outside the app, you record it, and the balance changes.
 
-| Available now (Nov 19) | Coming later |
+| Available now (Nov 24) | Coming later |
 |---|---|
-| Create an account, log in, log out | The review, settle, and edit pages in the app (the API can do them; see 3.12) |
-| Profile, email and password changes | Budgets, monthly analysis, activity history (Iteration 8) |
-| Groups, invitations, members | Admin dashboard (Iteration 9) |
-| Events for part of a group | A hosted HTTPS address you can open from any device |
+| Create an account, log in, log out | Budgets, monthly analysis, activity history (Iteration 8, not built) |
+| Profile, email and password changes | Admin dashboard (Iteration 9, not built) |
+| Groups, invitations, members | A hosted HTTPS address you can open from any device |
+| Events for part of a group | |
 | Add an expense with an even, custom or percentage split | |
-| Balances across all your groups | |
-| Upload a receipt photo or PDF | |
+| Edit or delete a manual expense (group admin) | |
+| Balances, and settle up (Pay or Mark received) | |
+| Upload a receipt, review it, and delete its picture | |
 | Works on a phone and a computer | |
 
 ---
@@ -51,7 +52,7 @@ These steps run the whole app on one computer. From Iteration 6 the app will als
 |---|---|---|
 | Docker Desktop | Current | Runs the PostgreSQL database |
 | Python | 3.12 | Runs the backend; the pinned packages install cleanly on 3.12 |
-| Node.js | 20 or newer | Runs the frontend |
+| Node.js | 22 or newer | Runs the frontend |
 | Git | Any | Gets the code |
 
 No Docker? `backend/scripts/dev-postgres.sh start` runs PostgreSQL from your home folder instead (see the README).
@@ -122,6 +123,15 @@ npm run dev
 Open `http://localhost:5173`. On Windows, if PowerShell blocks `npm`, type `npm.cmd` instead.
 
 You are set up correctly if you can create an account, log in and reach the Home page.
+
+## 2.4.1 Start the temporary receipt reader
+
+Only needed when you want an uploaded receipt to be read. Without it, the receipt stays at uploaded.
+
+1. Start the database and the backend first.
+2. On Windows, double-click `temporary-reader\Start_Receipt_Reader.bat`.
+3. The first time, paste the API key when it asks. It is saved in `temporary-reader\.env`. Git ignores that file. Never commit it.
+4. Leave the window open. The reader uses Haiku 5.5, medium effort, with thinking off.
 
 ## 2.5 Optional: sample data
 
@@ -222,7 +232,9 @@ Your share and the balances update as soon as it saves.
 
 ![Balances page](userguide-images/09-balances.png)
 
-**Balances** shows two totals at the top: **Owed to you** and **You owe**. Below them, **Owes you** and **You owe** list each person, the group, and the expenses behind the amount, largest first. A positive green amount is money owed to you.
+**Balances** shows two totals at the top: **Owed to you** and **You owe**. Below them, **Who owes you** and **Who you owe** list each person, newest first. Open a row to see the expenses. A positive amount is money owed to you.
+
+**Pay** and **Mark received** record a payment that already happened outside the app. The app does not move money. You can record the full amount or part of it. History lists those payments. A mistaken payment cannot be undone in the app.
 
 ## 3.9 Group settings
 
@@ -259,26 +271,29 @@ To log out, open the account menu and choose **Log out**.
 
 Every page fits a phone screen without sideways scrolling. On a phone, **Add expense** in the top bar becomes a **+** button, and buttons are sized for fingers.
 
-## 3.12 Review, settle, and edit on the server
+## 3.12 Scan a receipt, review it, and delete the picture
 
-These three work on the API. The pages are not in the app yet, so there is nothing to click for them. When the pages land, this section will get the screens.
+Upload from Home. The file has to be a JPEG or a PDF. The app stores it and waits. Nothing is read until the temporary reader is running (section 2, and `temporary-reader/README.md`). Keep that window open. The receipt then moves from uploaded, to reading, to read. If the read fails, the screen says so and you can enter the expense by hand. That is different from a file the app refused at upload.
 
-**Review a receipt.** After a receipt is read, you assign each item to the people who share it. An item can go to some of the group and not the rest. Those people do not pick up a share of that line. An item you leave unassigned is left out of the expense. The shares on a line have to add up to that line, to the cent. $10.00 across three people is $3.34, $3.33, and $3.33. If you cancel, nothing is saved. Saving keeps the picture. Deleting the picture is separate: the image goes away and the items stay. A picture nobody confirms is kept 7 days, then removed, and the receipt is marked abandoned. That cleanup job is not running yet.
+**Review.** On the review screen, fix what was read and pick who shares each item. An item can go to some of the group and not the rest. An item you leave unassigned is left out. The shares on a line have to add up to that line, to the cent. $10.00 across three people is $3.34, $3.33, and $3.33. Cancel saves nothing. Save adds the expense.
 
-**Settle up.** This records a payment someone made outside the app. The app does not move money. Either person on the debt can record it. The other person does not have to confirm, and both can see it. A group admin can record it too. Paying part of it leaves the rest. $20.00 of a $50.00 debt leaves $30.00. If you start a settlement and do not submit it, the balance stays put. You cannot settle a debt you are not part of.
+**Delete the picture.** The uploader or a group admin can delete the picture after it is no longer uploading or reading. The items stay. A picture nobody confirms is supposed to be kept 7 days and then removed. That cleanup job is not running yet.
 
-**Edit and delete an expense.** Deleting a manual expense puts the balances back. A $40.00 expense split $20.00 and $20.00, once deleted, leaves $0.00 between those two people. Today only a group admin can edit or delete. The agreed rule is wider: the person who paid, the person who created it, and the group admin. The API has not caught up to that rule yet. An expense that came from a confirmed receipt cannot be edited or deleted until the receipt is handled.
+The reader's API key stays on your computer in `temporary-reader/.env`. Do not commit it.
+
+## 3.13 Edit and delete an expense
+
+On the group page or on Balances, a group admin can edit or delete a manual expense. Delete asks first. Deleting puts the balances back. A $40.00 expense split $20.00 and $20.00, once deleted, leaves $0.00 between those two people. Today only a group admin can edit or delete. An expense that came from a confirmed receipt cannot be edited or deleted from these screens. The server says to use receipt review, and review is already closed after you save.
 
 ---
 
 # 4 Coming in later iterations
 
-These sections will be written in full as each feature ships. Review, settle, and edit are on the API (section 3.12). Their pages are still to come. Budget, analysis, activity, and admin screens get their sections when those screens exist.
+These sections will be written in full as each feature ships. Review, settle, edit, and picture deletion are in the app (sections 3.8, 3.12, and 3.13). Budget, analysis, activity, and admin screens get their sections when those screens exist.
 
 | Feature | What you will do | Iteration |
 |---|---|---|
-| Review, settle, and edit pages | The same actions as section 3.12, from the app instead of the API | 7, pages still to come |
-| Budgets | Set a monthly goal per category for yourself or a group. The app shows where you stand; it never blocks spending. Going over a goal is never blocked. The mid-month edit rule is still open. | 8 (Nov 16 to 20) |
+| Budgets | Set a monthly goal per category for yourself or a group. The app shows where you stand; it never blocks spending. Going over a goal is never blocked. The mid-month edit rule is still open. | 8 (not built as of Nov 24) |
 | Monthly analysis | See spending by category and store, and how your share compares to your group's split. A new account sees an empty state. | 8 |
 | Activity history | See every expense, settlement and membership change that involves you. Someone else does not see it. | 8 |
 | Admin dashboard | For Commerce Bank staff only: site-level numbers, never any one user's data. Login, dashboard, and access denied are not built. | 9 (Nov 23 to 25) |
@@ -289,18 +304,17 @@ These sections will be written in full as each feature ships. Review, settle, an
 
 | Problem | Why it happens | What to do |
 |---|---|---|
-| Home says "You are not in any groups on this device yet", but you are in groups | Until Iteration 6, the list of your groups is kept in each browser. A new browser, a private window or cleared site data starts with an empty list. | Accept invitations on the device you use, or open the group by its link (`/groups/<number>`). This goes away when the app gets a "my groups" route in Iteration 6. |
-| A group page shows "Group" instead of its name | Same cause as above: this browser has not seen the group yet. | Same as above. |
-| Balances is empty for the sample accounts | The sample-data script adds expenses but does not yet update balances (known bug, fix planned for Iteration 6). | Add an expense through the app; balances update for anything you add. |
+| Home lists no groups, but you belong to some | You are looking at a different account, or the backend is not the database that has your groups. Groups come from the server now, not from this browser. | Log in as the right account and check `http://localhost:8000/health`. |
+| A receipt stays on "uploaded" | The temporary reader is not running. The backend does not start it. | Start `temporary-reader\Start_Receipt_Reader.bat` and leave the window open. |
+| Balances is empty for the sample accounts | The sample-data script may not have been run, or it was run before expenses existed. | Add an expense through the app, or run `python seed.py` once on an empty database. |
 | You are sent to Log in | You are not logged in, your session expired (after 7 days), or you changed your password. | Log in again. |
 | "Password must contain at least one capital letter" or "one symbol" | The password rule: 8 or more characters, a capital letter, a symbol. | Choose a password that meets all three, for example by adding `!` and a capital. |
 | The sample logins do not work | The sample data was not loaded, or loaded into a different database. | Run `python seed.py` once on an empty `shared_expense_dev` database, then use the passwords in Section 2.5 exactly. |
 | `seed.py` says "Sample accounts already exist" | The script only runs on an empty database. | Use the accounts that already exist, or recreate the database and run it again. |
 | The page says it cannot reach the server | The backend is not running, or is on another port. | Start `uvicorn app.main:app --reload` in `backend/` and check `http://localhost:8000/health`. |
 | You opened `http://localhost:8000` and see text instead of the app | Port 8000 is the backend. | Open `http://localhost:5173`. |
-| `alembic upgrade head` says "Multiple head revisions" | A migration merged on Oct 30 branched the migration history (known bug, fix planned for Monday Nov 2). | Pull `main` again after the fix. Until then, run the commit before that merge: `git checkout 8c8498e`. |
-| Saving an expense or opening a group's expenses gives an error, and the backend log shows `'Expense' object has no attribute 'created_at'` | Same Oct 30 merge (known bug, fix planned for Nov 2). | Same as above. |
-| Removing a member who owes money gives no warning | The balance check is not connected to real balances yet (known bug, fix planned for Iteration 6). | Check Balances before you remove someone. |
+| `alembic upgrade head` says "Multiple head revisions" | An old checkout from before the Oct 30 chain was joined. | Pull the current `main` and run the command again. |
+| Removing a member who owes money gives no warning | Their rows in `balances` for this group sum to zero. | Check Balances. A nonzero total asks you to confirm. |
 | Docker says port 5432 is already in use | Another PostgreSQL is running on your computer. | Stop it, or change the port in `docker-compose.yml` and in `DATABASE_URL`. |
 | `pip install` fails on a package | Your Python is not 3.12. | Create the virtual environment with Python 3.12 (`py -3.12` on Windows, `python3.12` on Mac or Linux). |
 | PowerShell will not run `npm` | Windows script policy. | Use `npm.cmd install` and `npm.cmd run dev`. |

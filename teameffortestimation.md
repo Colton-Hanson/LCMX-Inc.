@@ -9,7 +9,7 @@
 | Document owner | Xander McKie |
 | Instructor | Prof. Jawad |
 | Sponsor | Commerce Bank |
-| Version and date | 1.0 Draft, October 30, 2026 |
+| Version and date | 1.1 Draft, November 24, 2026 |
 | Status | Draft. Actual hours are added at each Friday close-out; final version in Iteration 10 (Dec 4). |
 
 ## Revision history
@@ -17,6 +17,7 @@
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 1.0 | Oct 30, 2026 | Xander McKie | First version: roles, planned hours from the Iteration Plan, and estimates for the remaining iterations. |
+| 1.1 | Nov 24, 2026 | Xander McKie | Noted that Iteration 7 code is in the repo and Iterations 8 and 9 are not built. No actual hours were added, because none were logged. |
 
 ---
 
@@ -127,6 +128,8 @@ Filled in at each Friday close-out from JIRA. Leave a cell blank until the numbe
 | Documents and design (all iterations) | Xander | not in plan | | Charter, Requirements, Plan, Architecture, mockups, demo script |
 
 Iterations 0 to 2 and 6 to 10 are added the same way.
+
+As of November 24, 2026, Iteration 7 (review, assign, settle up, edit and delete, picture deletion, and the temporary reader) is in the repository. Iteration 8 (budgets, analysis, activity) is not built. Iteration 9 (admin) is not built. Actual hours for those iterations stay blank until someone logs them. This update does not invent hour totals.
 
 ## 6 Risks to these estimates
 

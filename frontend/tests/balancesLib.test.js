@@ -1,4 +1,4 @@
-// balancesLib.test.js — checks how the GET /balances reply is turned into rows and totals. Run with: npm test
+// balancesLib.test.js: checks how the GET /balances reply is turned into rows and totals. Run with: npm test
 
 import { buildBalances, FORMER_MEMBER } from '../src/lib/balances.js';
 

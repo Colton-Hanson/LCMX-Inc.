@@ -212,8 +212,12 @@ def file_block(file_bytes, file_type):
 
 
 def request_for(model, file_bytes, file_type):
-    # the effort is always sent; RECEIPT_READER_EFFORT only exists so one test run can use another level
+    # Effort is always sent. The stand-in key is for Haiku 5.5 at medium effort with thinking off,
+    # because a thinking reply is slower and is not part of this temporary reader.
+    # RECEIPT_READER_EFFORT exists so one test run can use another level.
+    # RECEIPT_READER_THINKING defaults to disabled. Any other value omits the field.
     effort = os.environ.get("RECEIPT_READER_EFFORT") or DEFAULT_EFFORT
+    thinking = os.environ.get("RECEIPT_READER_THINKING", "disabled")
     request = {
         "model": model,
         "max_tokens": MAX_TOKENS,
@@ -223,9 +227,7 @@ def request_for(model, file_bytes, file_type):
             "content": [file_block(file_bytes, file_type), {"type": "text", "text": PROMPT}],
         }],
     }
-    # optional: RECEIPT_READER_THINKING=disabled turns thinking off (only allowed at effort high or lower).
-    # Anything else sends no thinking field, which is the default.
-    if os.environ.get("RECEIPT_READER_THINKING") == "disabled":
+    if thinking == "disabled":
         request["thinking"] = {"type": "disabled"}
     return request
 

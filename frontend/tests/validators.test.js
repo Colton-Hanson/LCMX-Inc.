@@ -1,4 +1,4 @@
-// validators.test.js — automated tests for the input-checking functions in validators.js.
+// validators.test.js: automated tests for the input-checking functions in validators.js.
 // Run with: npm test.  `describe` groups related tests, `it` is one test, `expect` is the check.
 import { validateEmail, validatePassword, validateConfirm, checkPasswordRules, validateName } from '../src/lib/validators.js';
 

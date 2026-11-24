@@ -1,5 +1,13 @@
 “Collaborative finance for people who actually share their lives.”
 
+## Status as of November 24, 2026
+
+This note does not change the requirements below. It records which of them are in the repository.
+
+In the repository: accounts, groups, events, manual expenses and splits, balances, receipt upload, review and assign, edit and delete (admin only), settle up, and receipt picture deletion. A temporary reader (Haiku 5.5, medium effort, thinking off) lives in `temporary-reader/` and is not part of the backend. Its API key is not in git.
+
+Not in the repository: budgets, monthly analysis, activity history, notifications, the admin dashboard, and the 7 day receipt cleanup job.
+
 ## Scope: “Shared Expense Management Tool”
 
 - Shared and Personal Budgeting Application
@@ -88,7 +96,7 @@ Users → Group → Expenses → Splits → Balances (→ Budgets → AI Analysi
 
 # Use Cases for Requirements
 
-Cole, Mick, Xander, Lukas — 09/16/26
+Cole, Mick, Xander, Lukas - 09/16/26
 
 ---
 

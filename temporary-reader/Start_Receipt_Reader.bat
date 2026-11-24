@@ -16,6 +16,9 @@ echo.
 set /p KEY=Paste the API key you were given, then press Enter: 
 if "%KEY%"=="" goto nokey
 > ".env" echo RECEIPT_READER_API_KEY=%KEY%
+>> ".env" echo RECEIPT_READER_MODEL=claude-haiku-5-5
+>> ".env" echo RECEIPT_READER_EFFORT=medium
+>> ".env" echo RECEIPT_READER_THINKING=disabled
 cls
 
 :run

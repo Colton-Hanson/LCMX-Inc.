@@ -1,3 +1,5 @@
+// One group: members, events with who shares them, and recent expenses.
+// Edit and delete (SCRUM-135) show only when the server allows this person to change the expense.
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Avatar from '../components/Avatar.jsx';

@@ -10,7 +10,7 @@
 | Student document owner | Xander McKie |
 | Instructor | Prof. Jawad |
 | Sponsor or client | Commerce Bank |
-| Version and date | 1.0 Draft, October 29, 2026 |
+| Version and date | 1.1 Draft, November 24, 2026 |
 | Approval status | Draft |
 
 > Repository: <https://github.com/Colton-Hanson/LCMX-Inc.>
@@ -23,6 +23,7 @@
 |---|---|---|---|---|
 | 0.1 | Oct 29, 2026 | Xander McKie | Initial draft from the Charter, Requirements, and current repo | Pending team review |
 | 1.0 | Oct 29, 2026 | Xander McKie | First complete version for posting to the repo | Pending (Cole, Mick, Lukas) |
+| 1.1 | Nov 24, 2026 | Xander McKie | Status snapshot and the receipt, settlement, and group-list interfaces updated to match local main | Pending team review |
 
 ## Contents
 
@@ -59,10 +60,10 @@ This document describes the web application, REST API, PostgreSQL database, rece
 
 | Item | Status |
 |---|---|
-| Overall maturity | Iterations 0 to 4 are merged to `main` (last code merge Oct 27). Implemented: accounts, sessions, profile, groups, invitations, members, events, manual expenses with three split methods, and balances. Iteration 5 (Oct 26 to 30) is the prototype demo. Receipts begin in Iteration 6 (Nov 2 to 6). |
-| Views complete | All 18 sections drafted from the repository as of Oct 29. Receipt pipeline, settlement, budgets, analysis, admin, and activity are 🔵 Proposed. |
-| Known gaps | LLM vendor not final (OI-03). Demo hosting not final. Rate limiting not built. `GET /users` is unauthenticated. Password rule is enforced only in the browser. The event data model differs from the agreed design (ADR-05). No `GET /groups` route yet. |
-| Next update | After Iteration 6 (receipt upload and AI reading) closes on Nov 6. |
+| Overall maturity | As of Nov 24, 2026, local `main` includes Iterations 0 to 7: accounts, sessions, profile, groups, invitations, members, events, manual expenses with three split methods, balances, receipt upload, review and assign, edit and delete, settlements, and receipt picture deletion. Budgets, analysis, activity, and admin are not built. |
+| Views complete | Sections below were drafted Oct 29. The status snapshot and Section 12 catalog were updated Nov 24. Older diagrams may still show receipt and settlement work as proposed. |
+| Known gaps | The receipt reader is a separate process (`temporary-reader/`), not a call from FastAPI. Its key is only in that folder's git-ignored `.env`. It uses Haiku 5.5, medium effort, thinking off. Demo hosting is not final. Rate limiting is not built. `GET /users` is unauthenticated. The 7 day receipt cleanup job is not built. Budgets, analysis, and admin are not built. |
+| Next update | After Iteration 8 or 9 lands a budget, analysis, or admin route. |
 
 ## 1.3 System narrative
 
@@ -552,14 +553,14 @@ All routes are JSON over HTTP(S). "Auth" means a valid session cookie (`access_t
 | API-13 | Create expense | `POST /expenses` (group_id, description, amount, paid_by, participant_ids, optional split_method and split_values) | Yes | ✅ |
 | API-14 | List group expenses | `GET /groups/{id}/expenses` | Yes (accepted member) | ✅ |
 | API-15 | Balances | `GET /balances` (returns group_balances, overall_balances, total_net) | Yes | ✅ |
-| API-16 | List my groups | `GET /groups` | Yes | 🔵 not built; the frontend remembers groups in browser storage as a workaround |
-| API-17 | Group detail, event list, edit/delete expense | to be defined | Yes | 🔵 |
-| API-18 | Receipt upload and status | `POST /receipts`, `GET /receipts/{id}` | Yes | 🔵 Iteration 6 |
-| API-19 | Receipt review, confirm, delete picture | to be defined | Yes | 🔵 Iteration 7 |
-| API-20 | Settle debt | to be defined | Yes | 🔵 Iteration 7 |
-| API-21 | Budgets, analysis | to be defined | Yes | 🔵 Iteration 8 |
-| API-22 | Admin and activity | to be defined | Admin / Yes | 🔵 Iteration 9 |
-| API-23 | LLM service | Outbound HTTPS call from the receipt pipeline | API key | 🔵 Iteration 6 |
+| API-16 | List my groups | `GET /groups` | Yes | ✅ The frontend reads this route. It does not keep the group list in browser storage. |
+| API-17 | Group detail, events, edit and delete expense | `GET /groups/{id}`, `GET /groups/{id}/events`, `PUT /expenses/{id}`, `DELETE /expenses/{id}` | Yes | ✅ Edit and delete are admin only until the team changes that rule. A receipt-linked expense returns 409. |
+| API-18 | Receipt upload and status | `POST /receipts`, `GET /receipts/{id}` | Yes | ✅ Upload does not start the reader. Status stays `uploaded` until `temporary-reader/` runs. |
+| API-19 | Receipt review, confirm, delete picture | `PUT /receipts/{id}/items`, `POST /receipts/{id}/confirm`, `GET` and `DELETE /receipts/{id}/picture` | Yes | ✅ |
+| API-20 | Settle debt | `POST` and `GET /groups/{id}/settlements` | Yes | ✅ Records a payment made outside the app. No undo route. |
+| API-21 | Budgets, analysis | to be defined | Yes | 🔵 Iteration 8, not built as of Nov 24 |
+| API-22 | Admin and activity | to be defined | Admin / Yes | 🔵 Iteration 9, not built as of Nov 24 |
+| API-23 | LLM service | Outbound HTTPS from `temporary-reader/worker.py`, not from FastAPI | API key in `temporary-reader/.env` only | 🟡 Stand-in. Model `claude-haiku-5-5`, effort medium, thinking disabled. |
 | API-24 | `GET /users` | Lists every user's id and email | **None** | ⚠️ Defect, see Section 13 |
 
 ## 12.2 Contract details
@@ -573,7 +574,7 @@ All routes are JSON over HTTP(S). "Auth" means a valid session cookie (`access_t
 | Authorization | Group routes require accepted membership; balance and expense routes are scoped to the signed-in user. |
 | Rate limiting | Not implemented yet (NFR-SEC-05). 🔵 |
 | Versioning | None; routes are unversioned during the semester. Breaking changes are announced to the team first. |
-| File upload | Planned: PDF, JPEG, or camera image with type and size validation (FR-EXP-10, 16). |
+| File upload | JPEG or PDF, with type and size checks (FR-EXP-10, 16). Camera capture uses the same upload. |
 
 ---
 

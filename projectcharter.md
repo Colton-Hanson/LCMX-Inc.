@@ -149,6 +149,15 @@ Pursued only after every in-scope objective in Section 2 is met. (At least 2)
 | m7 | Nov 27 | Hardening | Full test pass with report. Security audit and ADA audit checklists cleared. Load check for simultaneous users. User guide complete. Feature freeze. |
 | m8 | Dec 2 | Delivery | Final presentation, live demo of all core features, and organized source files submitted at the start of the last week of the course. |
 
+### 6.0 Status as of November 24, 2026
+
+The milestone text above is the original charter. This note only records what is in the repository.
+
+- m1 through m4 are in the repository.
+- m5 is partly in the repository: upload, review and assign, failed read, and picture deletion. The reader is a temporary stand-in (`temporary-reader/`), not a backend route. The accuracy run is not done.
+- m6 is partly in the repository: settle debt is in the app. Budgets, analysis, activity, notifications, and the admin dashboard are not built.
+- m7 and m8 have not started.
+
 ### 6.1 Critical Path
 
 Authentication and the database schema (m3) gate everything. The core ledger (m4) gates both the receipt and review screen, which writes into it, and the analysis later, which reads from it. The receipt pipeline (m5) carries the most technical uncertainty.

@@ -83,8 +83,8 @@ export default function ReceiptStatusCard({ state, receipt, fileName, elapsed, s
             </CheckRow>
           </div>
           <dl className="kv" aria-label="What the AI found">
-            <dt>Store</dt><dd>{summary.store || '—'}</dd>
-            <dt>Date</dt><dd>{summary.date || '—'}</dd>
+            <dt>Store</dt><dd>{summary.store || '-'}</dd>
+            <dt>Date</dt><dd>{summary.date || '-'}</dd>
             <dt>Items</dt><dd>{summary.itemCount} found</dd>
             <dt>Items subtotal</dt><dd className="money">{summary.total}</dd>
           </dl>

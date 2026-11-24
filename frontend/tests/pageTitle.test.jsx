@@ -50,7 +50,7 @@ describe('Page titles', () => {
     renderAt(path);
     await screen.findByRole('heading', { level: 1 });
     // Wait for the title itself: a heading can show up a moment before the page sets its title (this made the test flaky).
-    await waitFor(() => expect(document.title).toBe(`${title} – Shared Expense Management Tool`));
+    await waitFor(() => expect(document.title).toBe(`${title} - Shared Expense Management Tool`));
   });
 });
 

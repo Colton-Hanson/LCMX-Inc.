@@ -544,13 +544,13 @@ function ExpenseFormFields({ group, edit, saved, title, setTitle, totalText, set
                             />
                             <span className="input-group-text" aria-hidden="true">%</span>
                           </div>
-                          <span className="split-amount">{share === undefined ? '—' : formatMoney(share)}</span>
+                          <span className="split-amount">{share === undefined ? '-' : formatMoney(share)}</span>
                         </>
                       )}
 
                       {method === 'even' && (
                         <span className="split-amount">
-                          {share === undefined ? '—' : formatMoney(share)}
+                          {share === undefined ? '-' : formatMoney(share)}
                           {split.adjustedIds.includes(id) && (
                             <>
                               <span className="split-extra" aria-hidden="true">+1¢</span>

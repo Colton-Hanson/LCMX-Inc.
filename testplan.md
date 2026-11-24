@@ -20,11 +20,11 @@ Viskovic, Lukas
 | Field | Entry |
 |---|---|
 | Document | Required document 5, part 1 of 3: Test Plan |
-| Other parts | [Test Specification](testspecification.md) (part 2) · [Test Reports](testreports.md) (part 3) |
+| Other parts | [Test Specification](testspec.md) (part 2) · [Test Reports](testreports.md) (part 3) |
 | Instructor | Prof. Jawad |
 | Sponsor | Commerce Bank |
 | Document owner | Xander McKie |
-| Version and date | 1.1 Draft, November 16, 2026 |
+| Version and date | 1.2 Draft, November 24, 2026 |
 | Status | Draft. Updated at every iteration close-out. Final version after the full test pass on Dec 2. |
 
 ## Revision history
@@ -33,6 +33,7 @@ Viskovic, Lukas
 |---|---|---|---|
 | 1.0 | Oct 30, 2026 | Xander McKie | First version, as one Test Documentation file (`testdocumentation`): test plan, test cases and the Oct 30 test run. |
 | 1.1 | Nov 16, 2026 | Xander McKie | Split into Test Plan, Test Specification and Test Reports to match the course templates. Schedule moved to the Iteration 8 to 10 plan (Thanksgiving week off, feature freeze Nov 20). Recurring bills and notifications added to the items tested. |
+| 1.2 | Nov 24, 2026 | Xander McKie | Reader description is the temporary Haiku stand-in. Iteration 7 screens are on local main. Link to the specification file name fixed. |
 
 ## Contents
 
@@ -82,7 +83,7 @@ These terms are used throughout the three test documents.
 | Balance | What one member owes another inside a group, after debts that run in opposite directions are netted. |
 | Settlement (settle up) | A record that one member paid another outside the app. The app records it and moves no money. |
 | Receipt | A JPEG photo or PDF a user uploads. The AI reader turns it into a store, a date and line items. |
-| AI reader (LLM/OCR) | The model that reads receipts: a small Qwen vision model, about 2B parameters (exact model ID to be confirmed). Being connected in Iteration 7 (SCRUM-133). |
+| AI reader (LLM/OCR) | The temporary reader in `temporary-reader/`. It calls `claude-haiku-5-5` at medium effort with thinking off (SCRUM-133). It is not inside the backend. Automated tests use a fake client and make no network calls. |
 | Site admin | A separate role that sees only site-level counts and can never open a user's data. |
 | Session | The login cookie that keeps a user signed in. It can expire or be revoked. |
 | Close-out | The Friday that ends each one-week iteration, when the full regression runs. |
@@ -95,7 +96,7 @@ These terms are used throughout the three test documents.
 
 ## 3 Items tested
 
-Items to be tested, as laid out in the Requirements Specification and the Project Plan, include but are not limited to the list below. The steps and expected results for each case are in the [Test Specification](testspecification.md).
+Items to be tested, as laid out in the Requirements Specification and the Project Plan, include but are not limited to the list below. The steps and expected results for each case are in the [Test Specification](testspec.md).
 
 | Item | Test cases | Run in |
 |---|---|---|
@@ -258,17 +259,17 @@ Testing time is part of each person's hours in the Team Effort Estimation (docum
 
 ## 10 Schedule
 
-This follows the Iteration 8 to 10 plan. Thanksgiving week (Iteration 9) is fully off, features freeze Friday Nov 20, and code freezes Wednesday Dec 2.
+This follows the Iteration 8 to 10 plan. Thanksgiving week (Iteration 9) has reduced capacity. Feature freeze was planned for Friday Nov 20, and code freeze for Wednesday Dec 2. Iteration 8 features were not built, so that freeze did not happen.
 
-| When | Test activity | Status on Nov 16 |
+| When | Test activity | Status on Nov 24 |
 |---|---|---|
 | Every pull request | Both suites run by hand before merging | GitHub Actions not set up |
 | Every Friday close-out | Full regression; failures filed as JIRA bugs | Ongoing |
 | Iteration 5 (Oct 26 to 30) | First full regression, E2E walkthrough, phone width, accessibility scan, security probes | Done Oct 30 |
-| Iteration 6 (Nov 2 to 6) | Upload tests; reading tests with recorded AI replies; first 15-receipt accuracy run | Upload tests merged Nov 8 to 11. The AI reader (a small Qwen model) is chosen but not connected yet, so reading tests and the accuracy run wait for it. |
-| Iteration 7 (Nov 9 to 13) | Review math, settlement, receipt picture deletion | Database tables merged Nov 13; routes and screens not on `main` yet |
-| Iteration 8 (Nov 16 to 20) | Monday kickoff regression on the live server, including re-tests of every 🔁 case (It8-16). Tests for budgets, analysis, recurring bills, activity, notifications and every blocked admin path (It8-18). Friday freeze close-out regression (It8-19). | Starts today |
-| Iteration 9 (Nov 23 to 27) | Thanksgiving break. No testing. Server check first thing Monday Nov 30. | Planned |
+| Iteration 6 (Nov 2 to 6) | Upload tests; reading tests with recorded AI replies; first 15-receipt accuracy run | Upload tests are in the repo. The temporary reader has unit tests with a fake client (32 passed on Nov 24). The 15-receipt accuracy run is not done. |
+| Iteration 7 (Nov 9 to 13) | Review math, settlement, receipt picture deletion | API tests and the frontend screens are on local main. Frontend suite: 587 passed on Nov 24. See the Test Reports for that run. |
+| Iteration 8 (Nov 16 to 20) | Monday kickoff regression on the live server, including re-tests of every repeat case (It8-16). Tests for budgets, analysis, recurring bills, activity, notifications and every blocked admin path (It8-18). Friday freeze close-out regression (It8-19). | Budgets, analysis, and activity are not built, so those cases stay skipped. |
+| Iteration 9 (Nov 23 to 27) | Thanksgiving week, reduced capacity. Admin is not built. A local unit-test run was still recorded on Nov 24. | In progress |
 | Iteration 10 (Nov 30 to Dec 4) | Security audit with rate limits and HTTPS (It10-1). ADA checklist and screen reader pass (It10-2). Load check (It10-3). Full test pass and final Test Report on Wednesday Dec 2 (It10-5). First-time-user check (It10-7). | Planned |
 | Monday Dec 7 | Final presentation and delivery | Planned |
 
@@ -284,7 +285,13 @@ DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/shared_expens
 python -m pytest -q
 ```
 
-**Frontend** (no database needed; from `frontend/`):
+**Temporary reader** (no database and no network; from `temporary-reader/` after `py -3.12 -m venv .venv` and `pip install -r requirements.txt`):
+
+```bash
+.venv\Scripts\python.exe -m pytest -q
+```
+
+**Frontend** (no database needed; from `frontend/`, and on Windows use a path whose drive letter is upper case):
 
 ```bash
 npm install

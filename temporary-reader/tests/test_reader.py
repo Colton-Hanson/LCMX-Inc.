@@ -77,11 +77,11 @@ def test_max_tokens_is_64000_and_the_streaming_call_is_used():
     assert len(streamed) == 1  # the reader called the streaming helper, not a plain request
 
 
-def test_thinking_is_not_sent_by_default(monkeypatch):
+def test_thinking_is_disabled_by_default(monkeypatch):
     monkeypatch.delenv("RECEIPT_READER_THINKING", raising=False)
     client = FakeClient(json.dumps(GOOD))
     read_receipt(b"x", "jpg", client=client, model="m")
-    assert "thinking" not in client.calls[0]
+    assert client.calls[0]["thinking"] == {"type": "disabled"}
 
 
 def test_thinking_disabled_is_sent_together_with_the_effort(monkeypatch):
@@ -116,6 +116,7 @@ def test_defaults_are_the_small_model_with_medium_effort(monkeypatch):
     read_receipt(b"x", "jpg", client=client)
     assert client.calls[0]["model"] == "claude-haiku-5-5"
     assert client.calls[0]["output_config"] == {"effort": "medium"}
+    assert client.calls[0]["thinking"] == {"type": "disabled"}
 
 
 def test_bad_json_then_good_on_retry():

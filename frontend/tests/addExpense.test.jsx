@@ -100,7 +100,7 @@ describe('Even split', () => {
   it('shows dashes until there is a total', async () => {
     await openPage();
     const rows = within(screen.getByRole('list', { name: 'Each person’s share' })).getAllByRole('listitem');
-    expect(rows[0]).toHaveTextContent('—');
+    expect(rows[0]).toHaveTextContent('-');
   });
 
   it('saves with the group, payer, people and an even split, then returns to the group page', async () => {

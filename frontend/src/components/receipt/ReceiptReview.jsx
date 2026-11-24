@@ -267,7 +267,7 @@ export default function ReceiptReview({ receipt, members, events = [], myId, gro
                   />
                 </div>
                 <span className="eachc">
-                  {row.cents === null || count === 0 ? '—' : count === 1 ? formatMoney(row.cents) : `${formatMoney(Math.floor(row.cents / count))} each`}
+                  {row.cents === null || count === 0 ? '-' : count === 1 ? formatMoney(row.cents) : `${formatMoney(Math.floor(row.cents / count))} each`}
                 </span>
                 {count === 0 && (
                   <p className="flagmsg"><Icon name="alert" /><span>{UNASSIGNED}</span></p>

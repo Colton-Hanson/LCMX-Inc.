@@ -1,5 +1,6 @@
 """Receipt upload route tests. No real database or AI service required."""
 
+import os
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
@@ -104,7 +105,9 @@ def test_valid_upload_creates_private_file_and_uploaded_row(
     assert saved.file_path.startswith(str(receipt_client["storage"]))
     assert Path(saved.file_path).read_bytes() == data
     assert format_name not in Path(saved.file_path).name
-    assert Path(saved.file_path).stat().st_mode & 0o077 == 0  # private permissions
+    # Windows stat() invents mode bits, so the Unix private-mode check only means something on POSIX.
+    if os.name != "nt":
+        assert Path(saved.file_path).stat().st_mode & 0o077 == 0
 
 
 # The wrong type, a corrupt file, and an empty file are refused with that cause (FR-EXP-16).

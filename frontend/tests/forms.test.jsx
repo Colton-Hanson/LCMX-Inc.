@@ -1,4 +1,4 @@
-// forms.test.jsx — automated tests that "use" the Register and Login pages like a person would:
+// forms.test.jsx: automated tests that "use" the Register and Login pages like a person would:
 // type into boxes, click buttons, and check what appears. The server is FAKED (mocked), so these
 // tests run without any backend. Run with: npm test
 

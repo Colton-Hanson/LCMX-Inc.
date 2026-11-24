@@ -1,4 +1,4 @@
-# Shared Expense Management Tool â€” Frontend
+# Shared Expense Management Tool - Frontend
 
 ## How to run it
 
@@ -29,7 +29,7 @@ Only needed to read receipts you upload. Without it, an upload stays at "uploade
 4. Upload a receipt in the app. Within a few seconds it goes from "uploaded" to "reading" to "read", and the review screen opens.
 
 Good to know:
-- The key stops working on Nov 23.
+- The API key lives only in `temporary-reader\.env`. Git ignores that file. Never commit it. The reader calls Haiku 5.5 at medium effort with thinking off.
 - The reader never changes the backend. It only reads `backend/.env` to find the database.
 - Delete the whole `temporary-reader` folder when the real reader is built into the backend.
 - Its own tests (no network): run `.venv\Scripts\python.exe -m pytest` from that folder.
@@ -78,11 +78,11 @@ Windows PowerShell blocking `npm`? Use `npm.cmd` instead, or run this once in th
 | `/groups/:groupId/settings` | `GroupSettingsPage.jsx` (SCRUM-69) | Member list with Admin, Member and Pending, add a member, remove with a balance warning. A Default split card sets how new expenses in the group start (Even, or a percentage for each member). Make admin is turned off for now. |
 | `/expenses/new` and `/groups/:groupId/expenses/new` | `AddExpensePage.jsx` (SCRUM-83, SCRUM-84) | Title, total, group, who paid, an optional event, and who is in the split (Even, Custom or Percentage), with each person's share shown live and a colour bar. The "Who is in this expense?" box is a button that puts everyone in or takes everyone out. Choosing "No event" keeps the people already picked. Save is blocked until the amounts add up. The group's default split is the starting choice and can be changed. Cancel discards the form. A user with no group sees a prompt to create one. |
 | `/balances` | `BalancesPage.jsx` (SCRUM-85, SCRUM-136) | Two totals, then the lists "Who owes you" and "Who you owe", with one row per person per group (newest first) and the expenses behind each amount. Pay and Mark received open a dialog. Settlement history is below. The green paid message has a grey X. |
-| `/settings` | `SettingsPage.jsx` (SCRUM-38, SCRUM-40) | A "â† Home" link, then three cards: Profile, Password and Notifications. Errors show under the field they belong to. |
+| `/settings` | `SettingsPage.jsx` (SCRUM-38, SCRUM-40) | A "<- Home" link, then three cards: Profile, Password and Notifications. Errors show under the field they belong to. |
 | | Profile card | Name and email. Changing the email asks for a verification code first. |
 | | Password card | Hidden until "Change password" is pressed. A change logs the user out everywhere, so they log in again. |
 | | Notifications card | Four checkboxes for which notifications to get |
-| anything else | â€” | Redirects to `/login` |
+| anything else | - | Redirects to `/login` |
 
 **Route guard (SCRUM-39).** `RequireAuth.jsx` is a wrapper that protects the pages inside it (every page except `/login` and `/register`). When one of them opens, it checks with the backend that the user has a valid session, and only then shows the page along with the signed-in top bar and the user's profile.
 - Guests get redirected to `/login` with a "Log in to continue." message.
