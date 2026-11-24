@@ -119,11 +119,31 @@ describe('buildBalances: expense lines', () => {
     expect(result.owedToYou[0].lines.map((l) => l.title)).toEqual(['Pizza']);
   });
 
-  it('gives no lines when they do not add up to the balance, or the group has no expenses loaded', () => {
-    const off = buildBalances({ balances, emailsByGroup, expensesByGroup: { 5: expenses.slice(1) }, myId: 1 });
-    expect(off.owedToYou[0].lines).toEqual([]);
+  // Changed for the real backend: after a settlement the expenses no longer add up to the balance,
+  // but the lines must still show (they carry Edit and Delete). The amount stays the server's number.
+  it('keeps the lines after a settlement and marks the row as including settlements', () => {
+    const after = buildBalances({
+      balances: { group_balances: [row(5, 2, '3.00', '0.00')] }, // they owed 5.00, then paid 2.00 back
+      emailsByGroup,
+      expensesByGroup: { 5: [expense(1, 'Pizza', 1, { 2: '5.00' })] },
+      myId: 1,
+    });
+    expect(after.owedToYou[0].cents).toBe(300);
+    expect(after.owedToYou[0].lines.map((l) => [l.title, l.cents])).toEqual([['Pizza', 500]]);
+    expect(after.owedToYou[0].settled).toBe(true);
+  });
+
+  it('does not mark a row whose lines add up, and gives no lines when the group has no expenses loaded', () => {
+    const exact = buildBalances({
+      balances: { group_balances: [row(5, 2, '5.00', '0.00')] },
+      emailsByGroup,
+      expensesByGroup: { 5: [expense(1, 'Pizza', 1, { 2: '5.00' })] },
+      myId: 1,
+    });
+    expect(exact.owedToYou[0].settled).toBe(false);
     const none = buildBalances({ balances, emailsByGroup, myId: 1 });
     expect(none.owedToYou[0].lines).toEqual([]);
+    expect(none.owedToYou[0].settled).toBe(false);
   });
 });
 

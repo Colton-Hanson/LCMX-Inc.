@@ -4,7 +4,10 @@ import { useState } from 'react';
 import Message from './Message.jsx';
 import SplitWho from './SplitWho.jsx';
 import { useAuth } from './RequireAuth.jsx';
-import { checkPercents, defaultBasisPoints, getSplitDefault, saveSplitDefault } from '../lib/splitDefault.js';
+import { saveSplitDefault } from '../api/groups.js';
+import { messageFromResult } from '../lib/apiErrors.js';
+import { useSplitDefault } from '../lib/groupHooks.js';
+import { checkPercents, defaultBasisPoints } from '../lib/splitDefault.js';
 import { formatBasisPoints } from '../lib/splits.js';
 import '../addExpense.css';
 
@@ -16,10 +19,34 @@ const METHODS = [
 // groupId  the group
 // members  accepted members [{ user_id, email }]
 export default function SplitDefaultPanel({ groupId, members }) {
-  const { profile } = useAuth();
+  const { status, saved, reload } = useSplitDefault(groupId);
+  if (status === 'loading') {
+    return (
+      <section className="panel" aria-labelledby="split-default-title">
+        <h2 id="split-default-title">Default split</h2>
+        <p className="text-body-secondary mb-0" role="status">Loading the default split…</p>
+      </section>
+    );
+  }
+  if (status === 'error') {
+    return (
+      <section className="panel" aria-labelledby="split-default-title">
+        <h2 id="split-default-title">Default split</h2>
+        <div className="d-flex flex-column align-items-start gap-3">
+          <Message kind="error" alert>We couldn’t load the default split. Check your connection and try again.</Message>
+          <button type="button" className="btn btn-ghost" onClick={reload}>Try again</button>
+        </div>
+      </section>
+    );
+  }
+  return <SplitDefaultForm groupId={groupId} members={members} saved={saved} />;
+}
+
+function SplitDefaultForm({ groupId, members, saved }) {
+  const { profile, onExpired } = useAuth();
+  const [saving, setSaving] = useState(false);
   const ids = members.map((m) => m.user_id);
 
-  const saved = getSplitDefault(groupId);
   const [method, setMethod] = useState(saved.method);
   const [texts, setTexts] = useState(() => textsFor(saved, ids)); // typed percentage for each member
   const [attempted, setAttempted] = useState(false); // true after Save was pressed with percentages that don't add up
@@ -39,19 +66,24 @@ export default function SplitDefaultPanel({ groupId, members }) {
     setNotice(null);
   }
 
-  function save(e) {
+  async function save(e) {
     e.preventDefault();
+    if (saving) return;
     if (method === 'percentage' && !check.valid) {
       setAttempted(true);
       setNotice(null);
       return;
     }
     const value = method === 'even' ? { method: 'even', percents: {} } : { method: 'percentage', percents: check.basisPoints };
-    if (saveSplitDefault(groupId, value)) {
+    setSaving(true);
+    const res = await saveSplitDefault(groupId, value);
+    setSaving(false);
+    if (res.status === 401) return onExpired();
+    if (res.ok) {
       setAttempted(false);
       setNotice({ kind: 'ok', text: method === 'even' ? 'Default split saved: even.' : 'Default split saved: percentages.' });
     } else {
-      setNotice({ kind: 'error', text: 'We couldn’t save the default split in this browser.' });
+      setNotice({ kind: 'error', text: messageFromResult(res, 'We couldn’t save the default split. Please try again.') });
     }
   }
 
@@ -138,7 +170,7 @@ export default function SplitDefaultPanel({ groupId, members }) {
         )}
 
         <div className="btn-row">
-          <button type="submit" className="btn btn-tint">Save default split</button>
+          <button type="submit" className="btn btn-tint" disabled={saving}>Save default split</button>
         </div>
       </form>
     </section>

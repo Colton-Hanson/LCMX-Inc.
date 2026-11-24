@@ -7,14 +7,14 @@ import { vi } from 'vitest';
 import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
 import * as expensesApi from '../src/api/expenses.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
 vi.mock('../src/api/expenses.js');
 
 const members = [
-  { user_id: 1, email: 'cole@umkc.edu', is_admin: true },
+  { user_id: 1, email: 'sam@umkc.edu', is_admin: true },
   { user_id: 2, email: 'maya@example.com', is_admin: false },
 ];
 const group = { id: 5, name: 'Lake House', type: 'outing' };
@@ -32,11 +32,12 @@ const expense = (id, description, paidBy, amount, shares, created = '2026-10-30T
 beforeEach(() => {
   vi.resetAllMocks();
   localStorage.clear();
-  localStorage.setItem('groups:1', JSON.stringify([group]));
+  mockGroups(groupsApi, [group]);
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
   groupsApi.getMembers.mockResolvedValue(ok(members));
   expensesApi.getGroupExpenses.mockResolvedValue(ok([]));
+  groupsApi.getGroupEvents.mockResolvedValue(ok([])); // the Events card on the group page
 });
 
 async function openGroup() {
@@ -62,7 +63,7 @@ describe('Recent expenses card', () => {
     const rows = expenseRows(await card().findAllByRole('listitem'));
     expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent('Pizza night');
-    expect(rows[0]).toHaveTextContent('maya@example.com paid. Oct 30');
+    expect(rows[0]).toHaveTextContent('Maya paid. Oct 30');
     expect(rows[0]).toHaveTextContent('$30.00');
     expect(rows[0]).toHaveTextContent('Your share $10.00');
     expect(rows[1]).toHaveTextContent('You paid.');
@@ -94,10 +95,10 @@ describe('Recent expenses card', () => {
     const rows = expenseRows(await card().findAllByRole('listitem'));
     const names = (row) => within(row).getAllByRole('listitem').map((li) => li.textContent);
     expect(within(rows[0]).getByText('Split between 2 people')).toBeInTheDocument();
-    expect(names(rows[0])).toEqual(['maya@example.com$20.00', 'You$10.00']);
+    expect(names(rows[0])).toEqual(['Maya$20.00', 'You$10.00']);
     expect(within(rows[1]).queryByText(/Split between/)).not.toBeInTheDocument(); // one person: nothing to open
     expect(within(rows[1]).queryAllByRole('listitem')).toHaveLength(0);
-    expect(names(rows[2])).toEqual(['You$3.00', 'Former member$3.00', 'maya@example.com$3.00']);
+    expect(names(rows[2])).toEqual(['You$3.00', 'Former member$3.00', 'Maya$3.00']);
   });
 
   it('shows an empty state with a link to add the first expense', async () => {

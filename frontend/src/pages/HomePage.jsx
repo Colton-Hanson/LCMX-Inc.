@@ -5,7 +5,8 @@ import PendingInvites from '../components/PendingInvites.jsx';
 import ScanDialog from '../components/receipt/ScanDialog.jsx';
 import '../receipt.css';
 import { useAuth } from '../components/RequireAuth.jsx';
-import { getKnownGroups } from '../lib/groupCache.js';
+import Message from '../components/Message.jsx';
+import { useMyGroups } from '../lib/groupHooks.js';
 import { typeLabel } from '../lib/groupTypes.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
 
@@ -18,16 +19,12 @@ function greeting(profile) {
 }
 
 // Page shown after signing in. The login check and top bar come from RequireAuth.
-// Shows the groups this browser knows about and the invitations waiting for an answer. Answering an invitation
-// updates the page right away, so an accepted group shows up in "Your groups" without a refresh.
+// Shows your groups (from the server) and the invitations waiting for an answer. Accepting an invitation
+// loads the groups again, so the new group shows up in "Your groups" without a refresh.
 export default function HomePage() {
   usePageTitle('Home');
   const { profile } = useAuth();
-
-  // WORKAROUND(no list routes): START. "Your groups" can't come from the server (no GET /groups), so it starts from the list this
-  // browser remembers. Replace with a real request when that route exists. See lib/groupCache.js.
-  const [groups, setGroups] = useState(() => getKnownGroups(profile.id));
-  // WORKAROUND(no list routes): END
+  const { status, groups, reload } = useMyGroups();
   const [scanOpen, setScanOpen] = useState(false); // the "Scan a receipt" pop-up
 
   return (
@@ -57,17 +54,25 @@ export default function HomePage() {
           <h2 id="groups-title">Your groups</h2>
           <Link className="link-strong" to="/groups">See all</Link>
         </div>
-        {groups.length === 0 ? (
+        {status === 'loading' && <p className="text-body-secondary mb-0" role="status">Loading your groups…</p>}
+        {status === 'error' && (
           <div className="d-flex flex-column align-items-start gap-3">
-            <p className="text-body-secondary mb-0">You are not in any groups on this device yet. Groups you create or join show up here.</p>
+            <Message kind="error" alert>We couldn’t load your groups. Check your connection and try again.</Message>
+            <button type="button" className="btn btn-ghost" onClick={reload}>Try again</button>
+          </div>
+        )}
+        {status === 'ready' && groups.length === 0 && (
+          <div className="d-flex flex-column align-items-start gap-3">
+            <p className="text-body-secondary mb-0">You are not in any groups yet. Groups you create or join show up here.</p>
             <Link className="btn btn-tint" to="/groups/new">Create group</Link>
           </div>
-        ) : (
+        )}
+        {status === 'ready' && groups.length > 0 && (
           <ul className="list-unstyled m-0 row-list">
             {groups.map((g) => (
               <li key={g.id}>
                 <Link className="row-item" to={`/groups/${g.id}`} state={{ group: g }}>
-                  <Avatar text={g.name} large />
+                  <Avatar text={g.name} large single />
                   <span className="row-grow">
                     <span className="row-title">{g.name}</span>
                     <span className="pill">{typeLabel(g.type)}</span>
@@ -79,7 +84,7 @@ export default function HomePage() {
         )}
       </section>
 
-      <PendingInvites showTitle={false} onJoined={setGroups} />
+      <PendingInvites showTitle={false} onJoined={reload} />
     </main>
   );
 }

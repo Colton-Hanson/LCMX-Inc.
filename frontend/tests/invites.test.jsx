@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
-import { renderApp, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
@@ -18,9 +18,9 @@ const invites = [
 
 beforeEach(() => {
   vi.resetAllMocks();
-  localStorage.clear();
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok(invites));
+  mockGroups(groupsApi, []); // no groups on the server unless a test says so
 });
 
 describe('Pending invites on Home', () => {
@@ -40,11 +40,13 @@ describe('Pending invites on Home', () => {
     renderApp('/home');
     await screen.findByRole('heading', { name: 'Your groups' });
     expect(screen.queryByRole('heading', { name: 'Pending invites' })).toBeNull();
-    expect(screen.getByText(/not in any groups on this device yet/i)).toBeInTheDocument();
+    expect(await screen.findByText(/not in any groups yet/i)).toBeInTheDocument();
   });
 
-  it('accepting adds the group to Your groups without loading the page again', async () => {
+  it('accepting loads the groups from the server again and the new group shows in Your groups', async () => {
     groupsApi.acceptInvitation.mockResolvedValue(ok({ message: 'Invitation accepted.' }));
+    const joined = { id: 7, name: 'Lake House', group_type: 'outing', created_by: 2, members: [] };
+    groupsApi.getMyGroups.mockResolvedValueOnce(ok([])).mockResolvedValue(ok([joined]));
     const user = userEvent.setup();
     renderApp('/home');
     await user.click(await screen.findByRole('button', { name: 'Accept invitation to Lake House' }));
@@ -56,8 +58,8 @@ describe('Pending invites on Home', () => {
     expect(screen.getByText('You joined Lake House.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Accept invitation to Lake House' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Accept invitation to Apartment 4B' })).toBeInTheDocument();
-    expect(groupsApi.getPendingInvitations).toHaveBeenCalledTimes(1); // no second load = no refresh
-    expect(JSON.parse(localStorage.getItem('groups:1'))).toEqual([{ id: 7, name: 'Lake House', type: 'outing' }]);
+    expect(groupsApi.getPendingInvitations).toHaveBeenCalledTimes(1); // the invitations are not loaded again
+    expect(groupsApi.getMyGroups).toHaveBeenCalledTimes(2); // the groups are: once on open, once after joining
   });
 
   it('moves keyboard focus to the confirmation after an answer', async () => {
@@ -80,7 +82,7 @@ describe('Pending invites on Home', () => {
     expect(screen.queryByRole('button', { name: 'Decline invitation to Apartment 4B' })).toBeNull();
     const groups = screen.getByRole('heading', { name: 'Your groups' }).closest('section');
     expect(within(groups).queryByRole('link', { name: /Apartment 4B/ })).toBeNull();
-    expect(localStorage.getItem('groups:1')).toBeNull();
+    expect(groupsApi.getMyGroups).toHaveBeenCalledTimes(1); // declining does not load the groups again
   });
 
   it('drops an invitation that is already gone (404) and says so', async () => {
@@ -128,8 +130,8 @@ describe('Pending invites on Home', () => {
     expect(await screen.findByRole('button', { name: 'Accept invitation to Lake House' })).toBeInTheDocument();
   });
 
-  it('shows groups remembered on this device under Your groups', async () => {
-    localStorage.setItem('groups:1', JSON.stringify([{ id: 3, name: 'Family', type: 'family' }]));
+  it('shows the groups from the server under Your groups', async () => {
+    mockGroups(groupsApi, [{ id: 3, name: 'Family', type: 'family' }]);
     groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
     renderApp('/home');
     const groups = (await screen.findByRole('heading', { name: 'Your groups' })).closest('section');
@@ -140,24 +142,27 @@ describe('Pending invites on Home', () => {
 
 describe('Pending invites on Groups', () => {
   it('shows the invitations above the group cards, with the title visible', async () => {
-    localStorage.setItem('groups:1', JSON.stringify([{ id: 3, name: 'Family', type: 'family' }]));
+    groupsApi.getMyGroups.mockResolvedValue(ok([{ id: 3, name: 'Family', group_type: 'family', created_by: 1, members: [] }]));
     renderApp('/groups');
     const title = await screen.findByRole('heading', { name: 'Pending invites' });
     expect(title).not.toHaveClass('visually-hidden');
-    const cards = screen.getByRole('list', { name: 'Your groups' });
+    const cards = await screen.findByRole('list', { name: 'Your groups' });
     expect(title.compareDocumentPosition(cards) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(cards).getByRole('link', { name: /Family/ })).toHaveAttribute('href', '/groups/3');
   });
 
-  it('accepting adds a card for the group without loading the page again', async () => {
+  // Changed for the real route: after accepting, the groups are asked for again from the server.
+  it('accepting loads the groups from the server again and the new card shows', async () => {
     groupsApi.acceptInvitation.mockResolvedValue(ok({ message: 'Invitation accepted.' }));
+    const joined = { id: 7, name: 'Lake House', group_type: 'outing', created_by: 2, members: [] };
+    groupsApi.getMyGroups.mockResolvedValueOnce(ok([])).mockResolvedValue(ok([joined]));
     const user = userEvent.setup();
     renderApp('/groups');
     await user.click(await screen.findByRole('button', { name: 'Accept invitation to Lake House' }));
     const cards = await screen.findByRole('list', { name: 'Your groups' });
     expect(within(cards).getByRole('link', { name: /Lake House/ })).toHaveAttribute('href', '/groups/7');
     expect(screen.getByText('You joined Lake House.')).toBeInTheDocument();
-    expect(groupsApi.getPendingInvitations).toHaveBeenCalledTimes(1);
+    expect(groupsApi.getMyGroups).toHaveBeenCalledTimes(2);
   });
 });
 

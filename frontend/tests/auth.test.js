@@ -33,35 +33,35 @@ afterEach(() => vi.unstubAllGlobals()); // put the real fetch back
 
 describe('auth.js sends the routes the backend expects', () => {
   it('registerUser POSTs { email, password } to /api/auth/register and nothing else', async () => {
-    fetchMock.mockResolvedValue(fakeResponse(201, { id: 1, email: 'cole@umkc.edu' }));
-    const result = await registerUser({ email: 'cole@umkc.edu', password: 'Abcdefg!', confirm: 'Abcdefg!' });
+    fetchMock.mockResolvedValue(fakeResponse(201, { id: 1, email: 'sam@umkc.edu' }));
+    const result = await registerUser({ email: 'sam@umkc.edu', password: 'Abcdefg!', confirm: 'Abcdefg!' });
 
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/auth/register'); // the proxy turns this into /auth/register on the backend
     expect(options.method).toBe('POST');
     expect(options.credentials).toBe('include'); // keeps the session cookie
     expect(options.headers).toEqual({ 'Content-Type': 'application/json' });
-    expect(JSON.parse(options.body)).toEqual({ email: 'cole@umkc.edu', password: 'Abcdefg!' }); // no "confirm" field sent
-    expect(result).toEqual({ ok: true, status: 201, data: { id: 1, email: 'cole@umkc.edu' } });
+    expect(JSON.parse(options.body)).toEqual({ email: 'sam@umkc.edu', password: 'Abcdefg!' }); // no "confirm" field sent
+    expect(result).toEqual({ ok: true, status: 201, data: { id: 1, email: 'sam@umkc.edu' } });
   });
 
   it('trims and lowercases emails so one person cannot get two accounts', async () => {
     fetchMock.mockResolvedValue(fakeResponse(200, {}));
-    await loginUser({ email: '  Cole@UMKC.edu ', password: 'Abcdefg!' });
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).email).toBe('cole@umkc.edu');
-    await registerUser({ email: 'COLE@umkc.EDU', password: 'Abcdefg!' });
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).email).toBe('cole@umkc.edu');
+    await loginUser({ email: '  Sam@UMKC.edu ', password: 'Abcdefg!' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).email).toBe('sam@umkc.edu');
+    await registerUser({ email: 'SAM@umkc.EDU', password: 'Abcdefg!' });
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).email).toBe('sam@umkc.edu');
   });
 
   it('loginUser POSTs to /api/auth/login', async () => {
     fetchMock.mockResolvedValue(fakeResponse(200, { message: 'Login successful' }));
-    await loginUser({ email: 'cole@umkc.edu', password: 'Abcdefg!' });
+    await loginUser({ email: 'sam@umkc.edu', password: 'Abcdefg!' });
     expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/login');
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
   });
 
   it('getCurrentUser GETs /api/auth/me with the cookie and no body', async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, { id: 1, email: 'cole@umkc.edu' }));
+    fetchMock.mockResolvedValue(fakeResponse(200, { id: 1, email: 'sam@umkc.edu' }));
     await getCurrentUser();
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/auth/me');
@@ -98,22 +98,22 @@ describe('auth.js sends the routes the backend expects', () => {
 
 describe('auth.js profile routes', () => {
   it('getProfile GETs /api/profile with the cookie', async () => {
-    fetchMock.mockResolvedValue(fakeResponse(200, { id: 1, name: 'Cole' }));
+    fetchMock.mockResolvedValue(fakeResponse(200, { id: 1, name: 'Sam' }));
     const result = await getProfile();
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/profile');
     expect(options.method).toBe('GET');
     expect(options.credentials).toBe('include');
-    expect(result.data).toEqual({ id: 1, name: 'Cole' });
+    expect(result.data).toEqual({ id: 1, name: 'Sam' });
   });
 
   it('updateProfile PATCHes only the fields it is given', async () => {
     fetchMock.mockResolvedValue(fakeResponse(200, {}));
-    await updateProfile({ name: 'Cole' });
+    await updateProfile({ name: 'Sam' });
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/profile');
     expect(options.method).toBe('PATCH');
-    expect(JSON.parse(options.body)).toEqual({ name: 'Cole' });
+    expect(JSON.parse(options.body)).toEqual({ name: 'Sam' });
   });
 
   it('requestEmailChange POSTs { new_email } trimmed and lowercased', async () => {

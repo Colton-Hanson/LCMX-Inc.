@@ -12,7 +12,7 @@ export function renderApp(path = '/home', state) {
   );
 }
 
-export const me = { id: 1, name: 'Cole Hanson', email: 'cole@umkc.edu', pending_email: null };
+export const me = { id: 1, name: 'Sam Rivera', email: 'sam@umkc.edu', pending_email: null };
 export const ok = (data, status = 200) => ({ ok: true, status, data });
 export const fail = (status, data = {}) => ({ ok: false, status, data });
 export const network = { ok: false, status: 0, network: true };
@@ -26,4 +26,18 @@ export function findAlert(expected) {
     if (!hit) throw new Error(`No alert with the text ${expected}`);
     return hit;
   });
+}
+
+// What the server sends for a group in GET /groups and GET /groups/{id}.
+export const serverGroup = (g) => ({ id: g.id, name: g.name, group_type: g.type, created_by: 1, members: [] });
+
+// Makes the mocked groups API answer for these groups ({ id, name, type }): the list, one group, and an even default split.
+// groupsApi is the module imported with `import * as groupsApi`. Call it after vi.resetAllMocks().
+export function mockGroups(groupsApi, list = []) {
+  groupsApi.getMyGroups.mockResolvedValue(ok(list.map(serverGroup)));
+  groupsApi.getGroup.mockImplementation((id) => {
+    const g = list.find((x) => x.id === id);
+    return Promise.resolve(g ? ok(serverGroup(g)) : fail(403));
+  });
+  groupsApi.getSplitDefault.mockResolvedValue(ok({ method: 'even', percents: {} }));
 }

@@ -1,5 +1,5 @@
 // The person at the start of a split row: avatar and email. On phones an email longer than NAME_LIMIT characters
-// is cut short with "…" and gets a small arrow that opens the full email on its own line. Shorter emails get no arrow.
+// is cut short with "…" and gets a small arrow that opens the full name on its own line. Shorter names get no arrow.
 import { useState } from 'react';
 import Avatar from './Avatar.jsx';
 
@@ -20,7 +20,7 @@ export default function SplitWho({ email, you = false }) {
           type="button"
           className="split-more"
           aria-expanded={open}
-          aria-label={`${open ? 'Hide' : 'Show'} the full email for ${email}`}
+          aria-label={`${open ? 'Hide' : 'Show'} the full name for ${email}`}
           onClick={() => setOpen((o) => !o)}
         >
           <svg className="split-more-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">

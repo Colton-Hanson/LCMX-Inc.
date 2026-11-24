@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../components/RequireAuth.jsx';
 import PickCard from '../components/receipt/PickCard.jsx';
 import ReceiptFrame from '../components/receipt/ReceiptFrame.jsx';
 import UploadStatusCard from '../components/receipt/UploadStatusCard.jsx';
-import { getKnownGroups } from '../lib/groupCache.js';
+import Message from '../components/Message.jsx';
+import { useMyGroups } from '../lib/groupHooks.js';
 import { useReceiptUpload } from '../lib/useReceiptUpload.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
 
@@ -12,13 +13,24 @@ import { usePageTitle } from '../lib/usePageTitle.js';
 // Picking a file uploads it, then moves to /receipts/<id>. Cancel clears the file.
 export default function ReceiptUploadPage() {
   usePageTitle('Scan a receipt');
-  const { profile, onExpired } = useAuth();
+  const { status, groups, reload } = useMyGroups();
+  if (status === 'loading') return <main className="page-wrap page-wrap--narrow"><p className="text-body-secondary mb-0" role="status">Loading your groups…</p></main>;
+  if (status === 'error') {
+    return (
+      <main className="page-wrap page-wrap--narrow">
+        <Message kind="error" alert>We couldn’t load your groups. Check your connection and try again.</Message>
+        <button type="button" className="btn btn-ghost" onClick={reload}>Try again</button>
+      </main>
+    );
+  }
+  return <UploadStep groups={groups} />;
+}
+
+// The upload step, once the user's groups are known.
+function UploadStep({ groups }) {
+  const { onExpired } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-
-  // WORKAROUND(no list routes): START. The group list is the one this browser has saved. See lib/groupCache.js.
-  const groups = useMemo(() => getKnownGroups(profile.id), [profile.id]);
-  // WORKAROUND(no list routes): END
   const wanted = Number(params.get('group'));
   const startGroup = groups.some((g) => g.id === wanted) ? wanted : null;
 

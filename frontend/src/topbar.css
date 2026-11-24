@@ -32,3 +32,10 @@
   .app-header .account-button { padding: 0 4px; }
   .app-header .account-chevron { display: none; }
 }
+
+/* Smallest phones: tighter spacing so the bar never needs a sideways scroll */
+@media (max-width: 374px) {
+  .app-header { padding: 0 4px; gap: 2px; }
+  .app-header .app-nav { gap: 0; }
+  .app-header .app-nav-link { padding: 0 2px; font-size: 0.8125rem; }
+}

@@ -13,11 +13,12 @@ import AddExpensePage from './pages/AddExpensePage.jsx';
 import BalancesPage from './pages/BalancesPage.jsx';
 import ReceiptUploadPage from './pages/ReceiptUploadPage.jsx';
 import ReceiptStatusPage from './pages/ReceiptStatusPage.jsx';
-import ReceiptReviewPlaceholderPage from './pages/ReceiptReviewPlaceholderPage.jsx';
+import ReceiptReviewPage from './pages/ReceiptReviewPage.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
 
 // Preview page with sample data. Dev only, not in the production build.
 const DevReceiptPreview = import.meta.env.DEV ? lazy(() => import('./pages/DevReceiptPreview.jsx')) : null;
+const DevSprint7Preview = import.meta.env.DEV ? lazy(() => import('./pages/DevSprint7Preview.jsx')) : null;
 
 // Maps each URL to its page. Unknown URLs go to the login page.
 export default function App() {
@@ -39,9 +40,12 @@ export default function App() {
         <Route path="/balances" element={<BalancesPage />} />
         <Route path="/receipts/new" element={<ReceiptUploadPage />} />
         <Route path="/receipts/:receiptId" element={<ReceiptStatusPage />} />
-        <Route path="/receipts/:receiptId/review" element={<ReceiptReviewPlaceholderPage />} />
+        <Route path="/receipts/:receiptId/review" element={<ReceiptReviewPage />} />
         {DevReceiptPreview && (
           <Route path="/dev/receipt-preview" element={<Suspense fallback={null}><DevReceiptPreview /></Suspense>} />
+        )}
+        {DevSprint7Preview && (
+          <Route path="/dev/sprint7-preview" element={<Suspense fallback={null}><DevSprint7Preview /></Suspense>} />
         )}
       </Route>
       {/* replace: keeps the unknown URL out of the browser history so Back does not return to it. */}

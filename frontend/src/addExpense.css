@@ -26,7 +26,7 @@
   top: 10px;
   bottom: 10px;
   width: 1px;
-  background: var(--line);
+  background: color-mix(in srgb, var(--text) 22%, transparent);
 }
 /* No line next to the chosen button, it already has its outline */
 .seg.split-seg button.is-on::before,
@@ -96,7 +96,7 @@
 
 /* Wide layout like the mockup: expense on the left, split on the right. One column on phones. */
 .add-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
-.how-seg a, .how-seg span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 8px; color: var(--text-muted); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.how-seg > a, .how-seg > span { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border-radius: 8px; color: var(--text-muted); font-weight: 600; text-decoration: none; white-space: nowrap; }
 .how-seg a:hover { color: var(--text); }
 .how-seg .on { background: var(--surface); color: var(--text); box-shadow: 0 0 0 2px var(--teal); }
 
@@ -105,7 +105,102 @@
 .add-grid .panel { min-width: 0; }
 @media (min-width: 900px) {
   .add-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
-  .add-group { grid-column: 1; grid-row: 1; }
-  .add-expense { grid-column: 1; grid-row: 2; }
-  .add-split { grid-column: 2; grid-row: 1 / span 2; }
+  .add-expense { grid-column: 1; grid-row: 1; }
+  .add-split { grid-column: 2; grid-row: 1; }
 }
+
+/* Title and total: same boxes as before, with the text centred and the amount a little bigger */
+.add-expense .field--center .form-control, .add-expense .field--hero .form-control { text-align: center; }
+.add-expense .field--hero .form-control { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Centred labels on the Add expense screen (the per-person split rows stay left-aligned so the numbers line up) */
+.add-grid .panel { text-align: center; }
+.add-grid .panel .form-label, .add-grid .panel legend { display: block; text-align: center; }
+.add-grid .panel .form-select { text-align: center; text-align-last: center; }
+.add-grid .panel .chip-list { justify-content: center; }
+.add-form .split-list, .add-form .split-list * { text-align: left; }
+
+/* Shine button: on hover the button lifts toward you (a little bigger, a deeper shadow) while one streak of light snaps
+   across it from left to right in under 200ms. Mouse: hover and keyboard focus. Touch: while pressed. Off for "reduce motion". */
+.btn-shine { position: relative; overflow: hidden; isolation: isolate; transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.15s ease-out; }
+.btn-shine::after { content: ''; position: absolute; top: 0; bottom: 0; left: -70%; width: 45%; background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.42) 50%, transparent 100%); transform: skewX(-18deg); opacity: 0; pointer-events: none; }
+.btn-shine:disabled::after { display: none; }
+@keyframes btn-shine-sweep { 0% { left: -70%; opacity: 0; } 25% { opacity: 1; } 100% { left: 130%; opacity: 0; } }
+@media (hover: hover) {
+  .btn-shine:not(:disabled):hover { transform: translateY(-2px) scale(1.035); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.4), 0 0 0 1px color-mix(in srgb, var(--teal) 70%, transparent); }
+  .btn-shine:not(:disabled):hover::after { animation: btn-shine-sweep 0.17s ease-out; }
+}
+.btn-shine:not(:disabled):focus-visible::after { animation: btn-shine-sweep 0.17s ease-out; }
+.btn-shine:not(:disabled):active { transform: translateY(0) scale(0.99); box-shadow: none; }
+.btn-shine:not(:disabled):active::after { animation: btn-shine-sweep 0.17s ease-out; }
+@media (prefers-reduced-motion: reduce) { .btn-shine::after { display: none; } .btn-shine { transition: none; } .btn-shine:hover { transform: none !important; } }
+
+/* Who is in: a tight box with the overlapping avatars of the people who are in (up to 4, then +N) and how many. The pills below put people in or out. */
+.who-summary { cursor: pointer; background: transparent; color: var(--text); font-family: inherit; min-height: 44px; transition: background .15s, transform .12s; }
+/* Read out by screen readers, not shown: what a tap does */
+.who-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.who-summary { position: relative; }
+.who-summary:hover { background: color-mix(in srgb, var(--teal) 10%, transparent); }
+.who-summary:active { transform: scale(.97); }
+.who-summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.who-summary { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; margin: 0 auto 12px; border: 1px solid var(--teal); border-radius: 12px; font-size: 0.875rem; font-weight: 600; box-shadow: 0 0 0 1px color-mix(in srgb, var(--teal) 35%, transparent); }
+.who-summary .stk-more { background: var(--raised); color: var(--text); font-size: 0.7rem; }
+
+/* "Add Expense": the heading is written in title case on screen (screen readers still read the words as written) */
+.title-case { text-transform: capitalize; }
+
+/* A soft, borderless band behind the heading and the Enter by hand / Scan a receipt switch */
+.add-top, .rc-top { padding: 14px 18px; border-radius: 14px; background: color-mix(in srgb, var(--teal) 7%, transparent); }
+.how-seg > a, .how-seg > span, .rc-top .seg > a, .rc-top .seg > span { gap: 8px; }
+.how-seg .ic, .rc-top .seg .ic { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* Boxes sized for what they hold: not the full width of the card, centred */
+.add-expense .form-control, .add-expense .form-select, .add-group .form-select { max-width: 360px; margin-inline: auto; min-height: 44px; padding-block: 6px; font-size: 1rem; }
+.add-expense .field--hero .form-control { max-width: 220px; font-size: 1.5rem; }
+.add-expense .field--center .form-control { max-width: 360px; }
+
+/* The split bar: one piece per person under the Even / Custom / Percentage row, same width as the row */
+.split-microbar { display: flex; gap: 3px; height: 6px; margin: 12px 2px 4px; }
+/* Every colour needs its own rule here: the first colour is only the avatar default, so it left a blank piece (Bob) */
+.split-microbar i { background: var(--avatar); }
+.split-microbar i.av-2 { background: var(--avatar-2); } .split-microbar i.av-3 { background: var(--avatar-3); } .split-microbar i.av-4 { background: var(--avatar-4); } .split-microbar i.av-5 { background: var(--avatar-5); }
+.split-microbar i { flex-basis: 0; min-width: 4px; border-radius: 3px; transition: flex-grow 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@media (prefers-reduced-motion: reduce) { .split-microbar i { transition: none; } }
+
+/* On a phone the two choices share one row, each taking half */
+@media (max-width: 520px) {
+  .add-top, .rc-top { padding: 12px 14px; }
+  .how-seg, .rc-top .seg { display: flex; flex-wrap: nowrap; width: 100%; }
+  .how-seg > a, .how-seg > span, .rc-top .seg > a, .rc-top .seg > span { flex: 1 1 0; min-width: 0; padding: 0 8px; font-size: 0.875rem; }
+}
+
+/* ---- Guided flow: a finished card turns a soft green, and a thin cyan line leads to the next card ---- */
+.add-expense, .add-split { position: relative; }
+.add-expense { transition: background-color 0.4s ease, border-color 0.4s ease; }
+.add-expense.is-done { background: color-mix(in srgb, var(--teal) 7%, var(--surface)); border-color: color-mix(in srgb, var(--teal) 45%, var(--line)); }
+.flow-trace { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+.flow-trace path { fill: none; stroke: var(--teal); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--teal) 65%, transparent)); }
+.ft-line { animation: ft-draw 0.14s ease-out forwards, ft-settle 0.5s 0.8s ease-out forwards; }
+.ft-a, .ft-b { animation: ft-draw 0.32s 0.12s cubic-bezier(0.4, 0, 0.2, 1) forwards, ft-settle 0.5s 0.8s ease-out forwards; }
+@keyframes ft-draw { to { stroke-dashoffset: 0; } }
+@keyframes ft-settle { to { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) {
+  .add-expense { transition: none; }
+  .flow-trace path { animation: none; stroke-dashoffset: 0; opacity: 0.4; }
+}
+
+/* "in Apartment 4B" under the heading */
+.add-top-main { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; min-width: 0; }
+.add-top-main h1 { margin: 0; }
+.add-in { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 0.9375rem; }
+.add-in .form-select { width: auto; max-width: 100%; min-height: 36px; padding: 2px 34px 2px 12px; border-radius: 999px; background-color: transparent; font-weight: 600; font-size: 0.9375rem; text-align: left; text-align-last: left; }
+.add-top { align-items: center; }
+
+/* Side by side on a wide screen: both cards are the same height, with the buttons at the bottom of the split card */
+@media (min-width: 900px) {
+  .add-grid { align-items: stretch; }
+  .add-split > .btn-row { margin-top: auto; }
+}
+
+/* Words that should start with a capital on screen, without changing the words a screen reader hears */
+.cap { text-transform: capitalize; }

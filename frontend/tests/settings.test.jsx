@@ -27,8 +27,8 @@ function renderSettings() {
 
 const profile = {
   id: 1,
-  name: 'Cole',
-  email: 'cole@umkc.edu',
+  name: 'Sam',
+  email: 'sam@umkc.edu',
   photo_url: null,
   notify_group_invite: true,
   notify_new_expense: true,
@@ -56,8 +56,8 @@ describe('Settings page', () => {
     expect(screen.getByRole('region', { name: 'Profile' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Password' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Notifications' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Name')).toHaveValue('Cole');
-    expect(screen.getByLabelText('Email')).toHaveValue('cole@umkc.edu');
+    expect(screen.getByLabelText('Name')).toHaveValue('Sam');
+    expect(screen.getByLabelText('Email')).toHaveValue('sam@umkc.edu');
     expect(screen.getByLabelText('Someone marks a payment as paid')).not.toBeChecked();
     expect(screen.getByLabelText('Someone invites me to a group')).toBeChecked();
     expect(screen.getByRole('button', { name: 'Upload a photo' })).toBeDisabled();
@@ -122,7 +122,7 @@ describe('Settings page', () => {
 
   it('handles two email changes in a row, confirming each with its own code', async () => {
     // A small fake server: remembers the email, the pending email, and only accepts the matching code.
-    const server = { email: 'cole@umkc.edu', pending: null };
+    const server = { email: 'sam@umkc.edu', pending: null };
     api.getProfile.mockImplementation(async () =>
       ok({ ...profile, email: server.email, pending_email: server.pending })
     );
@@ -187,7 +187,7 @@ describe('Settings page', () => {
     const user = userEvent.setup();
     const email = await screen.findByLabelText('Email');
     await user.clear(email);
-    await user.type(email, 'cole @gmail.com');
+    await user.type(email, 'sam @gmail.com');
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(screen.getByText('Enter a valid email address, like name@example.com.')).toBeInTheDocument();
     expect(email).toHaveAttribute('aria-invalid', 'true');
@@ -422,6 +422,6 @@ describe('Settings page', () => {
     await user.click(await screen.findByRole('button', { name: /Account menu/ }));
     const menu = screen.getByRole('link', { name: 'Settings' });
     expect(menu).toHaveAttribute('href', '/settings');
-    expect(within(document.body).getByText('cole@umkc.edu', { selector: '.account-email' })).toBeInTheDocument();
+    expect(within(document.body).getByText('sam@umkc.edu', { selector: '.account-email' })).toBeInTheDocument();
   });
 });

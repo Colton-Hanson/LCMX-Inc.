@@ -54,6 +54,17 @@ describe('useReceiptStatus', () => {
     expect(receiptsApi.getReceipt).toHaveBeenCalledTimes(3); // no more checks once it's read
   });
 
+  it('stops with the confirmed state once the receipt is saved as an expense', async () => {
+    receiptsApi.getReceipt.mockResolvedValueOnce(ok({ ...read, status: 'reading' })).mockResolvedValue(ok({ ...read, status: 'confirmed', expense_id: 30 }));
+    const { result } = renderHook(() => useReceiptStatus(9));
+    await tick(0);
+    expect(result.current.state).toBe('waiting');
+    await tick(POLL_MS);
+    expect(result.current.state).toBe('confirmed');
+    await tick(POLL_MS * 5);
+    expect(receiptsApi.getReceipt).toHaveBeenCalledTimes(2); // no more checks once it's confirmed
+  });
+
   it('stops with the failed state when the server could not read the receipt', async () => {
     receiptsApi.getReceipt.mockResolvedValue(ok({ ...uploaded, status: 'failed' }));
     const { result } = renderHook(() => useReceiptStatus(9));

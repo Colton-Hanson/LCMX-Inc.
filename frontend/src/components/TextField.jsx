@@ -3,6 +3,8 @@ import { useId } from 'react';
 // Labelled text input with an error message slot, matching EmailField and PasswordField.
 // Props:
 //   label, value, onChange(value), onBlur, error ('' for none), type, autoComplete, inputMode, disabled
+//   variant      'hero' (centred, bigger amount) or 'center' (centred text); the box and its label stay as they were
+//   placeholder  hint text inside the empty box
 //   describedBy  id of extra helper text that screen readers should read with the field
 //   children     rendered directly under the input (helper text, checklists)
 export default function TextField({
@@ -16,6 +18,8 @@ export default function TextField({
   inputMode,
   describedBy,
   disabled,
+  variant,
+  placeholder,
   children,
 }) {
   const id = useId(); // unique id so the label and the input are linked
@@ -23,8 +27,8 @@ export default function TextField({
   // Everything a screen reader should read along with the input: the error (if there is one) and the helper text.
   const describedIds = [error ? errId : null, describedBy].filter(Boolean).join(' ') || undefined;
   return (
-    <div className="field mb-3">
-      <label htmlFor={id} className="form-label fw-semibold">{label}</label>
+    <div className={`field mb-3${variant ? ` field--${variant}` : ''}`}>
+      <label htmlFor={id} className={`form-label fw-semibold${variant === 'center' ? ' visually-hidden' : ''}`}>{label}</label>
       <input
         id={id}
         className={`form-control form-control-lg${error ? ' is-invalid' : ''}`}
@@ -34,6 +38,7 @@ export default function TextField({
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         autoComplete={autoComplete}
+        placeholder={placeholder}
         disabled={disabled}
         aria-invalid={error ? 'true' : 'false'}
         aria-describedby={describedIds}

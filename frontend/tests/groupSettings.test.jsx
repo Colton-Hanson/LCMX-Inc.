@@ -6,24 +6,25 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import * as api from '../src/api/auth.js';
 import * as groupsApi from '../src/api/groups.js';
-import { renderApp, findAlert, me, ok, fail, network } from './helpers.jsx';
+import { renderApp, findAlert, me, ok, fail, network, mockGroups } from './helpers.jsx';
 
 vi.mock('../src/api/auth.js');
 vi.mock('../src/api/groups.js');
 
 const group = { id: 5, name: 'Lake House', type: 'outing' };
 const adminList = [
-  { user_id: 1, email: 'cole@umkc.edu', is_admin: true },
+  { user_id: 1, email: 'sam@umkc.edu', is_admin: true },
   { user_id: 2, email: 'maya@example.com', is_admin: false },
   { user_id: 3, email: 'devin@example.com', is_admin: false },
 ];
 const memberView = [
-  { user_id: 1, email: 'cole@umkc.edu', is_admin: false },
+  { user_id: 1, email: 'sam@umkc.edu', is_admin: false },
   { user_id: 2, email: 'maya@example.com', is_admin: true },
 ];
 
 beforeEach(() => {
   vi.resetAllMocks();
+  mockGroups(groupsApi, []);
   localStorage.clear();
   api.getProfile.mockResolvedValue(ok(me));
   groupsApi.getPendingInvitations.mockResolvedValue(ok([]));
@@ -42,7 +43,7 @@ describe('Group settings: member list', () => {
     const list = screen.getByRole('heading', { name: 'Members' }).closest('section');
     const rows = within(list).getAllByRole('listitem');
     expect(rows).toHaveLength(3);
-    expect(within(rows[0]).getByText('cole@umkc.edu')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('sam@umkc.edu')).toBeInTheDocument();
     expect(within(rows[0]).getByText('You')).toBeInTheDocument();
     expect(within(rows[0]).getByText('Admin')).toBeInTheDocument();
     expect(within(rows[1]).getByText('Member')).toBeInTheDocument();
@@ -53,7 +54,7 @@ describe('Group settings: member list', () => {
     await openPage();
     expect(screen.getByRole('button', { name: 'Remove maya@example.com from Lake House' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remove devin@example.com from Lake House' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Remove cole@umkc.edu/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Remove sam@umkc.edu/ })).toBeNull();
   });
 
   it('hides Remove from people who are not the admin', async () => {
@@ -70,7 +71,7 @@ describe('Group settings: member list', () => {
     const button = screen.getByRole('button', { name: 'Make maya@example.com the admin' });
     expect(button).toBeDisabled();
     expect(button).toHaveAccessibleDescription(/isn’t available yet/);
-    expect(screen.queryByRole('button', { name: 'Make cole@umkc.edu the admin' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Make sam@umkc.edu the admin' })).toBeNull();
   });
 });
 

@@ -6,8 +6,8 @@ import TextField from '../components/TextField.jsx';
 import { useAuth } from '../components/RequireAuth.jsx';
 import { createEvent } from '../api/groups.js';
 import { parseGroupId, useGroupMembers, useKnownGroup } from '../lib/groupHooks.js';
-import { rememberEvent } from '../lib/eventCache.js';
 import { messageFromResult } from '../lib/apiErrors.js';
+import { labelsFor } from '../lib/people.js';
 import { usePageTitle } from '../lib/usePageTitle.js';
 import { validateEventName } from '../lib/validators.js';
 
@@ -29,9 +29,10 @@ export default function CreateEventPage() {
 function EventForm({ groupId }) {
   usePageTitle('New event');
   const navigate = useNavigate();
-  const { profile, onExpired } = useAuth();
+  const { onExpired } = useAuth();
   const group = useKnownGroup(groupId);
   const { status, members, reload } = useGroupMembers(groupId);
+  const labels = labelsFor(members); // short names like "Alice R."
 
   const [name, setName] = useState('');
   const [mode, setMode] = useState('all'); // 'all' | 'pick'
@@ -73,10 +74,6 @@ function EventForm({ groupId }) {
       setSubmitError(messageFromResult(res, 'We couldn’t create the event. Please try again.'));
       return;
     }
-    // WORKAROUND(no list routes): START. The backend can't list events, so remember this one in this browser so the group page can
-    // show it. Only this browser will ever see it. Delete when a list-events route exists. See lib/eventCache.js.
-    rememberEvent(profile.id, groupId, { id: res.data.id, name: res.data.name, count: res.data.member_ids.length, all: mode === 'all' });
-    // WORKAROUND(no list routes): END
     const text = `Event “${res.data.name}” created for ${res.data.member_ids.length} ${res.data.member_ids.length === 1 ? 'member' : 'members'}.`;
     navigate(backTo, { state: { group, notices: [{ kind: 'ok', text }] } });
   }
@@ -131,8 +128,8 @@ function EventForm({ groupId }) {
               {members.map((m) => (
                 <li key={m.user_id}>
                   <button type="button" className={`chip${picked.includes(m.user_id) ? ' is-on' : ''}`} aria-pressed={picked.includes(m.user_id)} onClick={() => toggle(m.user_id)}>
-                    <Avatar text={m.email} />
-                    {m.email}
+                    <Avatar text={labels[m.user_id]} />
+                    {labels[m.user_id]}
                   </button>
                 </li>
               ))}

@@ -1,5 +1,27 @@
 /* Group page: the amount column in Recent expenses, the split list, and the three buttons under the title. Everything else uses the shared classes in styles.css. */
-.exp-amount-col { margin-left: auto; text-align: right; }
+/* The expenses that belong to an event, under the event on the group page */
+/* Small, plain buttons in a card's top-right corner (Expand all, Collapse all, New event) */
+/* Same look as "Show both" and "Expand all" on Balances. Two classes in the selector so the plain .btn size can't win. */
+.panel .mini-btn { min-height: 30px; padding: 2px 9px; font-size: .8125rem; font-weight: 400; line-height: 1.3; white-space: nowrap; }
+.panel-actions { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.panel-head:has(.mini-btn) { align-items: flex-start; flex-wrap: nowrap; gap: 8px; }
+.panel-head:has(.mini-btn) h2 { min-width: 0; }
+.panel-head:has(.mini-btn) .mini-btn { margin-top: -4px; } /* sits up in the corner, level with the title's top */
+/* The people in an event: listed one under another, the round avatar with the name on its right */
+.exp-split-list.ev-people { gap: 8px; margin-top: 10px; }
+.exp-split-list.ev-people li { justify-content: flex-start; align-items: center; gap: 10px; } /* name right next to the circle */
+.exp-split-list.ev-people .ev-pname { flex: 1 1 auto; min-width: 0; text-align: left; }
+.exp-split-list.ev-people .ev-pshare { flex: none; margin-left: auto; font-variant-numeric: tabular-nums; } /* the share, far right */
+.ev-out, .ev-exp-by { color: var(--text-muted); font-size: .8125rem; }
+.ev-people .av { width: 28px; height: 28px; font-size: .7rem; }
+.row-item > .ev-exps { flex: 1 1 100%; list-style: none; margin: 4px 0 0; padding: 0 0 0 46px; display: flex; flex-direction: column; gap: 2px; }
+.ev-exps li { display: flex; justify-content: space-between; gap: 12px; font-size: .875rem; color: var(--text-muted); }
+.ev-exp-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-exp-amt { flex: none; font-variant-numeric: tabular-nums; }
+.exp-amount-col { margin-left: auto; text-align: right; flex: none; }
+/* Expense rows: the title takes whatever room is left (it is cut with a caret when long), so the edit and trash
+   icons always stay on the same line as the amount instead of dropping to a row of their own. */
+.row-item:has(> .exp-amount-col) > .row-grow { flex: 1 1 0; }
 .exp-amount { display: block; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* "Split between N people": the summary line, and everyone's share when opened */
